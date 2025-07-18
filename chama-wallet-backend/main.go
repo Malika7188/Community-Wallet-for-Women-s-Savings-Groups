@@ -6,19 +6,26 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/stellar/go/keypair"
+	"gorm.io/gorm"
 
+	"chama-wallet-backend/database"
 	"chama-wallet-backend/routes"
 	"chama-wallet-backend/services"
 )
 
+var DB *gorm.DB
+
 func main() {
+	database.ConnectDB()
 	app := fiber.New()
 	routes.Setup(app)
-	fmt.Println(app.Listen("localhost:3000"))
+	// routes.GroupRoutes(app)
 
-	// if err := app.Listen("localhost:3000"); err != nil {
-	// 	log.Fatalf("Failed to start server: %v", err)
-	// }
+	fmt.Println("✅ Setting up group routes...")
+	routes.GroupRoutes(app)
+
+	fmt.Println("🚀 Server starting on localhost:3000")
+	log.Fatal(app.Listen("localhost:3000"))
 
 	kp1, err := keypair.Random()
 	if err != nil {
@@ -36,7 +43,7 @@ func main() {
 	fmt.Println("Seed 1:", kp1.Seed())
 	fmt.Println("Account 2:", kp2.Address())
 	fmt.Println("Seed 2:", kp2.Seed())
-	
+
 	fmt.Println("From:", addr1)
 	fmt.Println("To:", addr2)
 
