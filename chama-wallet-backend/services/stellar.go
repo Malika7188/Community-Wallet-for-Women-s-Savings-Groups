@@ -9,6 +9,7 @@ import (
 	"github.com/stellar/go/clients/horizonclient"
 	"github.com/stellar/go/keypair"
 	"github.com/stellar/go/network"
+	"github.com/stellar/go/protocols/horizon"
 	"github.com/stellar/go/txnbuild"
 )
 
@@ -52,55 +53,54 @@ func GetBalance(address string) (string, error) {
 }
 
 // SendXLM transfers XLM from sender to receiver
-func SendXLM(senderSecret, receiverAddress, amount string) (string, error) {
-	// Load sender keypair
-	senderKP, err := keypair.ParseFull(senderSecret)
+func SendXLM(seed, destination, amount string) (horizon.Transaction, error) {
+	client := horizonclient.DefaultTestNetClient
+
+	// Load source account
+	kp, err := keypair.ParseFull(seed)
 	if err != nil {
-		return "", err
+		return horizon.Transaction{}, err
 	}
 
-	// Load sender account
-	accountRequest := horizonclient.AccountRequest{AccountID: senderKP.Address()}
-	sourceAccount, err := client.AccountDetail(accountRequest)
+	ar := horizonclient.AccountRequest{AccountID: kp.Address()}
+	sourceAccount, err := client.AccountDetail(ar)
 	if err != nil {
-		return "", err
+		return horizon.Transaction{}, err
 	}
 
-	// Create payment operation
-	payment := txnbuild.Payment{
-		Destination: receiverAddress,
+	// Build the transaction
+	op := txnbuild.Payment{
+		Destination: destination,
 		Amount:      amount,
 		Asset:       txnbuild.NativeAsset{},
 	}
-
-	// Build transaction
-	txParams := txnbuild.TransactionParams{
-		SourceAccount:        &sourceAccount,
-		IncrementSequenceNum: true,
-		Operations:           []txnbuild.Operation{&payment},
-		BaseFee:              txnbuild.MinBaseFee,
-		Preconditions: txnbuild.Preconditions{
-			TimeBounds: txnbuild.NewInfiniteTimeout(),
+	tx, err := txnbuild.NewTransaction(
+		txnbuild.TransactionParams{
+			SourceAccount:        &sourceAccount,
+			IncrementSequenceNum: true,
+			Operations:           []txnbuild.Operation{&op},
+			BaseFee:              txnbuild.MinBaseFee,
+			// Timebounds:           txnbuild.NewInfiniteTimeout(),
 		},
-	}
-
-	tx, err := txnbuild.NewTransaction(txParams)
+	)
 	if err != nil {
-		return "", err
+		return horizon.Transaction{}, err
 	}
 
-	// Sign
-	tx, err = tx.Sign(network.TestNetworkPassphrase, senderKP)
+	tx, err = tx.Sign(network.TestNetworkPassphrase, kp)
 	if err != nil {
-		return "", err
+		return horizon.Transaction{}, err
 	}
 
-	// Submit
-	resp, err := client.SubmitTransaction(tx)
+	txeBase64, err := tx.Base64()
 	if err != nil {
-		return "", err
+		return horizon.Transaction{}, err
 	}
 
-	fmt.Println("Transaction Successful! Hash:", resp.Hash)
-	return resp.Hash, nil
+	resp, err := client.SubmitTransactionXDR(txeBase64)
+	if err != nil {
+		return horizon.Transaction{}, err
+	}
+
+	return resp, nil
 }
