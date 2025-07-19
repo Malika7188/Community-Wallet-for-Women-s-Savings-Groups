@@ -8,10 +8,9 @@ import (
 	"chama-wallet-backend/services"
 )
 
-// AuthMiddleware validates JWT tokens
+// AuthMiddleware validates JWT tokens and loads the user into context
 func AuthMiddleware() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		// Get token from Authorization header
 		authHeader := c.Get("Authorization")
 		if authHeader == "" {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
@@ -19,14 +18,12 @@ func AuthMiddleware() fiber.Handler {
 			})
 		}
 
-		// Check if header starts with "Bearer "
 		if !strings.HasPrefix(authHeader, "Bearer ") {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 				"error": "Invalid authorization header format",
 			})
 		}
 
-		// Extract token
 		token := strings.TrimPrefix(authHeader, "Bearer ")
 		if token == "" {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
@@ -34,7 +31,6 @@ func AuthMiddleware() fiber.Handler {
 			})
 		}
 
-		// Validate token
 		claims, err := services.ValidateJWT(token)
 		if err != nil {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
@@ -42,9 +38,14 @@ func AuthMiddleware() fiber.Handler {
 			})
 		}
 
-		// Store user info in context
-		c.Locals("userID", claims.UserID)
-		c.Locals("email", claims.Email)
+		user, err := services.GetUserByID(claims.UserID)
+		if err != nil {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"error": "User not found",
+			})
+		}
+
+		c.Locals("user", user)
 
 		return c.Next()
 	}
@@ -59,8 +60,10 @@ func OptionalAuthMiddleware() fiber.Handler {
 			if token != "" {
 				claims, err := services.ValidateJWT(token)
 				if err == nil {
-					c.Locals("userID", claims.UserID)
-					c.Locals("email", claims.Email)
+					user, err := services.GetUserByID(claims.UserID)
+					if err == nil {
+						c.Locals("user", user)
+					}
 				}
 			}
 		}

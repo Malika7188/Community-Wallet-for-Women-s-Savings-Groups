@@ -40,15 +40,15 @@ func GetGroupByID(id string) (models.Group, error) {
 
 func AddMemberToGroup(groupID, walletAddress string) (models.Group, error) {
 	var group models.Group
-	if err := database.DB.First(&group, "id = ?", groupID).Error; err != nil {
+	if err := database.DB.Preload("Members").First(&group, "id = ?", groupID).Error; err != nil {
 		return group, err
 	}
 
-	var existing models.Member
-	if err := database.DB.
-		Where("wallet = ? AND group_id = ?", walletAddress, groupID).
-		First(&existing).Error; err == nil {
-		return group, nil // already exists
+	// Check if member already exists
+	for _, member := range group.Members {
+		if member.Wallet == walletAddress {
+			return group, nil // Member already exists
+		}
 	}
 
 	member := models.Member{
@@ -56,9 +56,12 @@ func AddMemberToGroup(groupID, walletAddress string) (models.Group, error) {
 		Wallet:  walletAddress,
 		GroupID: groupID,
 	}
-	database.DB.Create(&member)
+	if err := database.DB.Create(&member).Error; err != nil {
+		return group, err
+	}
 
-	return GetGroupByID(groupID) // to return updated group with members
+	group.Members = append(group.Members, member)
+	return group, nil
 }
 
 // func Contribute(groupID, memberID string, amount float64) error {

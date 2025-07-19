@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"fmt"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 
@@ -18,7 +20,6 @@ func CreateGroup(c *fiber.Ctx) error {
 	var payload struct {
 		Name   string `json:"name"`
 		Wallet string `json:"wallet"`
-		Admin  string `json:"admin"` // Optional: If the creator is stored
 	}
 
 	if err := c.BodyParser(&payload); err != nil {
@@ -41,6 +42,14 @@ func CreateGroup(c *fiber.Ctx) error {
 
 	if err := database.DB.Create(&group).Error; err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to save group"})
+	}
+
+	// Add the creator as the first member
+	user := c.Locals("user").(models.User)
+	_, err = services.AddMemberToGroup(group.ID, user.Wallet)
+	if err != nil {
+		// If adding the member fails, we might want to log it but not fail the whole group creation
+		fmt.Println("Warning: failed to add creator as member to new group:", err)
 	}
 
 	return c.JSON(fiber.Map{
@@ -148,4 +157,15 @@ func GetAllGroups(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(groups)
+}
+
+func GetGroupDetails(c *fiber.Ctx) error {
+	groupID := c.Params("id")
+	group, err := services.GetGroupWithMembers(groupID)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": "Group not found",
+		})
+	}
+	return c.JSON(group)
 }

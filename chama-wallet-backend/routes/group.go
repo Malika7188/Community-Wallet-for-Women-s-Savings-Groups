@@ -15,6 +15,7 @@ func GroupRoutes(app *fiber.App) {
 
 	// Public routes (can be accessed without authentication)
 	app.Get("/groups", middleware.OptionalAuthMiddleware(), handlers.GetAllGroups)
+	app.Get("/group/:id", middleware.OptionalAuthMiddleware(), handlers.GetGroupDetails)
 	app.Get("/group/:id/balance", middleware.OptionalAuthMiddleware(), handlers.GetGroupBalance)
 
 	// Protected routes (require authentication)
