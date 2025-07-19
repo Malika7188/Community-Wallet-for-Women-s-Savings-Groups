@@ -24,6 +24,9 @@ func main() {
 	fmt.Println("✅ Setting up group routes...")
 	routes.GroupRoutes(app)
 
+	fmt.Println("✅ Setting up auth routes...")
+	routes.AuthRoutes(app)
+
 	fmt.Println("🚀 Server starting on localhost:3000")
 	log.Fatal(app.Listen("localhost:3000"))
 
