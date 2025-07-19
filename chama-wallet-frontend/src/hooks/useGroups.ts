@@ -5,7 +5,12 @@ import toast from 'react-hot-toast'
 export const useGroups = () => {
   return useQuery({
     queryKey: ['groups'],
-    queryFn: () => groupApi.getAllGroups(),
+    queryFn: async () => {
+      console.log('🔍 Fetching groups...') // Add debug log
+      const response = await groupApi.getAllGroups()
+      console.log('📊 Groups response:', response.data) // Add debug log
+      return response.data
+    },
   })
 }
 
@@ -32,7 +37,7 @@ export const useGroupMutations = () => {
   })
 
   const joinGroup = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) => 
+    mutationFn: ({ id, data }: { id: string; data: any }) =>
       groupApi.joinGroup(id, data),
     onSuccess: () => {
       toast.success('Joined group successfully!')
