@@ -7,6 +7,8 @@ import (
 )
 
 func ContributeToGroup(c *fiber.Ctx) error {
+	// ContractID := "CADHKUC557DJ2F2XGEO4BGHFIYQ6O5QDVNG637ANRAGPBSWXMXXPMOI4"
+
 	groupID := c.Params("id")
 
 	var payload struct {
@@ -23,16 +25,19 @@ func ContributeToGroup(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "group not found"})
 	}
 
-	err = services.SendPayment(payload.Secret, group.Wallet, payload.Amount)
+	// 🔁 Soroban contract call instead of native XLM payment
+	args := []string{payload.From, payload.Amount}
+	output, err := services.CallSorobanFunction(group.ContractID, "contribute", args)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
 	return c.JSON(fiber.Map{
-		"message": "Contribution successful",
+		"message": "Contribution successful via Soroban",
 		"group":   groupID,
 		"from":    payload.From,
 		"to":      group.Wallet,
 		"amount":  payload.Amount,
+		"tx":      output,
 	})
 }
