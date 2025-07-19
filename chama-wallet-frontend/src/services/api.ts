@@ -6,7 +6,12 @@ import type {
   TransferRequest, 
   CreateGroupRequest, 
   JoinGroupRequest, 
-  ContributeRequest 
+  ContributeRequest,
+  InviteUserRequest,
+  ActivateGroupRequest,
+  User,
+  Notification,
+  GroupInvitation
 } from '../types'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'
@@ -74,6 +79,25 @@ export const groupApi = {
   getGroupBalance: (id: string) => api.get(`/group/${id}/balance`),
   joinGroup: (id: string, data: JoinGroupRequest) => api.post(`/group/${id}/join`, data),
   contributeToGroup: (id: string, data: ContributeRequest) => api.post(`/group/${id}/contribute`, data),
+  inviteToGroup: (id: string, data: InviteUserRequest) => api.post(`/group/${id}/invite`, data),
+  getNonGroupMembers: (id: string) => api.get<User[]>(`/group/${id}/non-members`),
+  activateGroup: (id: string, data: ActivateGroupRequest) => api.post(`/group/${id}/activate`, data),
+  nominateAdmin: (id: string, data: { nominee_id: string }) => api.post(`/group/${id}/nominate-admin`, data),
+  approveMember: (id: string, data: { member_id: string, action: string }) => api.post(`/group/${id}/approve-member`, data),
+  createPayoutRequest: (id: string, data: any) => api.post(`/group/${id}/payout-request`, data),
+  getPayoutRequests: (id: string) => api.get(`/group/${id}/payout-requests`),
+}
+
+export const payoutApi = {
+  approvePayout: (id: string, data: { approved: boolean }) => api.post(`/payout/${id}/approve`, data),
+}
+
+export const notificationApi = {
+  getNotifications: () => api.get<Notification[]>('/notifications'),
+  markAsRead: (id: string) => api.put(`/notifications/${id}/read`),
+  getInvitations: () => api.get<GroupInvitation[]>('/invitations'),
+  acceptInvitation: (id: string) => api.post(`/invitations/${id}/accept`),
+  rejectInvitation: (id: string) => api.post(`/invitations/${id}/reject`),
 }
 
 export default api
