@@ -18,25 +18,19 @@ var DB *gorm.DB
 
 func main() {
 	database.ConnectDB()
+	database.RunMigrations()
 	app := fiber.New()
 
 	// Add CORS middleware
-    app.Use(cors.New(cors.Config{
-        AllowOrigins:     "http://localhost:5173",
-        AllowMethods:     "GET,POST,PUT,DELETE,OPTIONS",
-        AllowHeaders:     "Origin,Content-Type,Accept,Authorization",
-        AllowCredentials: true,
-    }))
+	app.Use(cors.New(cors.Config{
+		AllowOrigins:     "http://localhost:5173",
+		AllowMethods:     "GET,POST,PUT,DELETE,OPTIONS",
+		AllowHeaders:     "Origin,Content-Type,Accept,Authorization",
+		AllowCredentials: true,
+	}))
 	routes.Setup(app)
 	routes.SetupSorobanRoutes(app)
-	
-
-	// routes.GroupRoutes(app)
-
-	fmt.Println("✅ Setting up group routes...")
 	routes.GroupRoutes(app)
-
-	fmt.Println("✅ Setting up auth routes...")
 	routes.AuthRoutes(app)
 
 	fmt.Println("🚀 Server starting on localhost:3000")
