@@ -18,6 +18,45 @@ const api = axios.create({
   },
 })
 
+// Add request interceptor to include auth token
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token')
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
+    return config
+  },
+  (error) => {
+    return Promise.reject(error)
+  }
+)
+
+// Add response interceptor to handle auth errors
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Clear auth data and redirect to login
+      localStorage.removeItem('user')
+      localStorage.removeItem('token')
+      window.location.href = '/login'
+    }
+    return Promise.reject(error)
+  }
+)
+
+// Auth APIs
+export const authApi = {
+  register: (data: { name: string; email: string; password: string }) => 
+    api.post('/auth/register', data),
+  login: (data: { email: string; password: string }) => 
+    api.post('/auth/login', data),
+  logout: () => api.post('/auth/logout'),
+  getProfile: () => api.get('/auth/profile'),
+  updateProfile: (data: { name: string }) => api.put('/auth/profile', data),
+}
+
 // Wallet APIs
 export const walletApi = {
   createWallet: () => api.post('/create-wallet'),

@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { Link, Navigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { Eye, EyeOff, Wallet } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const LoginPage = () => {
   const { user, login, isLoading } = useAuth()
+  const navigate = useNavigate()
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -20,6 +21,8 @@ const LoginPage = () => {
     e.preventDefault()
     try {
       await login(formData.email, formData.password)
+      toast.success('Login successful!')
+      navigate('/dashboard')
     } catch (error) {
       toast.error('Invalid email or password')
     }

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { User } from '../types'
 
 interface AuthContextType {
@@ -30,7 +31,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     // Check if user is logged in on app start
     const storedUser = localStorage.getItem('user')
-    if (storedUser) {
+    const storedToken = localStorage.getItem('token')
+    if (storedUser && storedToken) {
       setUser(JSON.parse(storedUser))
     }
     setIsLoading(false)
@@ -48,8 +50,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         createdAt: new Date().toISOString(),
       }
       
+      const mockToken = 'mock-jwt-token-' + Date.now()
+      
       setUser(mockUser)
       localStorage.setItem('user', JSON.stringify(mockUser))
+      localStorage.setItem('token', mockToken)
     } catch (error) {
       throw new Error('Login failed')
     } finally {
@@ -69,8 +74,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         createdAt: new Date().toISOString(),
       }
       
+      const mockToken = 'mock-jwt-token-' + Date.now()
+      
       setUser(mockUser)
       localStorage.setItem('user', JSON.stringify(mockUser))
+      localStorage.setItem('token', mockToken)
     } catch (error) {
       throw new Error('Signup failed')
     } finally {
@@ -81,6 +89,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = () => {
     setUser(null)
     localStorage.removeItem('user')
+    localStorage.removeItem('token')
   }
 
   const value = {
