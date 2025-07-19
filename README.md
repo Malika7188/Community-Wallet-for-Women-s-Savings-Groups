@@ -81,3 +81,57 @@ soroban keys fund --rpc-url https://soroban-testnet.stellar.org:443 --network-pa
 ```
 
 curl -X POST http://localhost:3000/api/contribute   -H "Content-Type: application/jsonCADHKUC557DJ2F2XGEO4BGHFIYQ6O5QDVNG637ANRAGPBSWXMXXPMOI4", "amount":"100"
+
+
+- Testing commands
+```
+soroban keys address test-account
+
+curl "https://friendbot.stellar.org/?addr=YOUR_PUBLIC_KEY"
+
+- To run the scripts
+chmod +x create-group.sh test-operations.sh manage-groups.sh
+
+./create-group.sh
+
+./create-group.sh "Sar Queens" "Women-led chama powered by Stellar" 
+
+"GA7LYFBRHPF3WOJTUCQIWC3RDRBORDCXVWAYWAXDG4BT2XIPKDEXNJXL"
+
+./test-operations.sh
+
+./manage-groups.sh list                    # List all groups
+./manage-groups.sh show <group-id>         # Show specific group
+./manage-groups.sh contribute <group-id>   # Contribute to a group
+./manage-groups.sh balance <contract-id>   # Check balance
+```
+
+
+ ```bash
+  curl -X POST http://localhost:3000/api/balance \
+  -H "Content-Type: application/json" \
+  -d '{"contract_id": "CADHKUC557DJ2F2XGEO4BGHFIYQ6O5QDVNG637ANRAGPBSWXMXXPMOI4", "user_address": "GBVFW3I5RSN5GPMWUC73J7FUPPXX3QXLMDEGZXYMP56C36E6FQQLX6WU"}'
+
+  ````
+
+  ```bassh
+  curl -X POST http://localhost:3000/api/withdraw \
+  -H "Content-Type: application/json" \
+  -d '{"contract_id": "CADHKUC557DJ2F2XGEO4BGHFIYQ6O5QDVNG637ANRAGPBSWXMXXPMOI4", "user_address": "GBVFW3I5RSN5GPMWUC73J7FUPPXX3QXLMDEGZXYMP56C36E6FQQLX6WU", "amount": "50"}'
+
+  ```
+
+  ```bash
+  curl -X POST http://localhost:3000/api/history \
+  -H "Content-Type: application/json" \
+  -d '{"contract_id": "CADHKUC557DJ2F2XGEO4BGHFIYQ6O5QDVNG637ANRAGPBSWXMXXPMOI4", "user_address": "GBVFW3I5RSN5GPMWUC73J7FUPPXX3QXLMDEGZXYMP56C36E6FQQLX6WU"}'
+
+  `````
+
+  ```bash
+   curl -X POST http://localhost:3000/group/create   -H "Content-Type: application/json"   -d '{
+    "name": "Sar Queens",
+    "wallet": "GA...WALLET",
+    "description": "Women-led chama powered by Stellar"
+  }'
+  ```
