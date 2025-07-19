@@ -13,7 +13,7 @@ const DashboardPage = () => {
   const stats = [
     {
       name: 'Total Groups',
-      value: groups?.data?.length || 0,
+      value: groups?.length || 0,
       icon: Users,
       color: 'bg-blue-500',
     },
@@ -96,7 +96,7 @@ const DashboardPage = () => {
             <div className="flex justify-center py-8">
               <LoadingSpinner />
             </div>
-          ) : groups?.data?.length === 0 ? (
+          ) : groups?.length === 0 ? (
             <div className="text-center py-8">
               <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-600 mb-4">You haven't joined any groups yet</p>
@@ -106,7 +106,7 @@ const DashboardPage = () => {
             </div>
           ) : (
             <div className="space-y-4">
-              {groups?.data?.slice(0, 3).map((group) => (
+              {groups?.slice(0, 3).map((group) => (
                 <Link
                   key={group.ID}
                   to={`/groups/${group.ID}`}
@@ -121,7 +121,7 @@ const DashboardPage = () => {
                   </div>
                 </Link>
               ))}
-              {groups?.data && groups.data.length > 3 && (
+              {groups && groups.length > 3 && (
                 <Link to="/groups" className="block text-center text-primary-600 hover:text-primary-700 font-medium">
                   View all groups
                 </Link>
