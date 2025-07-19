@@ -18,13 +18,17 @@ type CreateGroupRequest struct {
 
 func CreateGroup(c *fiber.Ctx) error {
 	var payload struct {
-		Name   string `json:"name"`
-		Wallet string `json:"wallet"`
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		Wallet      string `json:"wallet"`
 	}
 
 	if err := c.BodyParser(&payload); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid body"})
 	}
+
+	// Get authenticated user
+	user := c.Locals("user").(models.User)
 
 	// ✅ Step 1: Deploy contract using CLI (or pre-deployed if needed)
 	contractID, err := services.DeployChamaContract()
@@ -34,19 +38,23 @@ func CreateGroup(c *fiber.Ctx) error {
 
 	// ✅ Step 2: Save group in DB with the new contractID
 	group := models.Group{
-		ID:         uuid.NewString(),
-		Name:       payload.Name,
-		Wallet:     payload.Wallet,
-		ContractID: contractID,
+		ID:          uuid.NewString(),
+		Name:        payload.Name,
+		Description: payload.Description,
+		Wallet:      payload.Wallet,
+		CreatorID:   user.ID,
+		ContractID:  contractID,
 	}
 
 	if err := database.DB.Create(&group).Error; err != nil {
+		fmt.Printf("❌ Failed to create group: %v\n", err) // Add debug log
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to save group"})
 	}
 
+	fmt.Printf("✅ Group created successfully: %+v\n", group) // Add debug log
+
 	// Add the creator as the first member
-	user := c.Locals("user").(models.User)
-	_, err = services.AddMemberToGroup(group.ID, user.Wallet)
+	_, err = services.AddMemberToGroup(group.ID, user.ID, user.Wallet)
 	if err != nil {
 		// If adding the member fails, we might want to log it but not fail the whole group creation
 		fmt.Println("Warning: failed to add creator as member to new group:", err)
@@ -64,6 +72,7 @@ func AddMember(c *fiber.Ctx) error {
 
 	var body struct {
 		Wallet string `json:"wallet"`
+		UserID string `json:"user_id"` // Add this field
 	}
 
 	if err := c.BodyParser(&body); err != nil || body.Wallet == "" {
@@ -72,7 +81,7 @@ func AddMember(c *fiber.Ctx) error {
 		})
 	}
 
-	group, err := services.AddMemberToGroup(groupID, body.Wallet)
+	group, err := services.AddMemberToGroup(groupID, body.UserID, body.Wallet)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
@@ -151,11 +160,13 @@ func GetGroupBalance(c *fiber.Ctx) error {
 func GetAllGroups(c *fiber.Ctx) error {
 	groups, err := services.GetAllGroups()
 	if err != nil {
+		fmt.Printf("❌ Error fetching groups: %v\n", err) // Add debug log
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to fetch groups",
 		})
 	}
 
+	fmt.Printf("✅ Found %d groups\n", len(groups)) // Add debug log
 	return c.JSON(groups)
 }
 
