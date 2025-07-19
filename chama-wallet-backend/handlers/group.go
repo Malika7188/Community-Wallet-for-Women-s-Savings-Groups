@@ -125,7 +125,7 @@ func GetGroupBalance(c *fiber.Ctx) error {
 	}
 
 	// Fetch the balance from Stellar
-	balance, err := services.GetBalance(group.Wallet)
+	balance, err := services.GetBalance(group.Wallet, group.Name)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
