@@ -16,7 +16,6 @@ func Setup(app *fiber.App) {
 	app.Get("/generate-keypair", handlers.GenerateKeypair)
 	app.Post("/fund/:address", handlers.FundAccount)
 	app.Get("/transactions/:address", handlers.GetTransactionHistory)
-	
-
+	app.Post("/api/contribute", handlers.ContributeHandler)
 
 }
