@@ -10,7 +10,12 @@ const GroupsPage = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterType, setFilterType] = useState('all')
 
-  const filteredGroups = groups?.data?.filter(group => {
+  // Add debug logs
+  console.log('Groups data:', groups)
+  console.log('Groups type:', typeof groups)
+  console.log('Is array:', Array.isArray(groups))
+
+  const filteredGroups = groups?.filter(group => {
     const matchesSearch = group.Name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          group.Description.toLowerCase().includes(searchTerm.toLowerCase())
     
@@ -93,7 +98,7 @@ const GroupsPage = () => {
       {filteredGroups.length > 0 && (
         <div className="mt-8 text-center">
           <p className="text-gray-600">
-            Showing {filteredGroups.length} of {groups?.data?.length || 0} groups
+            Showing {filteredGroups.length} of {groups?.length || 0} groups
           </p>
         </div>
       )}
