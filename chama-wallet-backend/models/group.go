@@ -7,6 +7,7 @@ type Group struct {
 	Wallet        string
 	Members       []Member       `gorm:"foreignKey:GroupID"`
 	Contributions []Contribution `gorm:"foreignKey:GroupID"`
+	ContractID    string         `gorm:"column:contract_id"`
 }
 
 type Member struct {
