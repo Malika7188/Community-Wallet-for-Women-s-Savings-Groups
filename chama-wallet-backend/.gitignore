@@ -1,0 +1,23 @@
+# Go
+*.exe
+*.out
+*.test
+*.mod
+*.sum
+bin/
+vendor/
+
+# Soroban CLI
+.soroban/
+*.wasm
+*.xdr
+target/
+
+# Environment
+.env
+
+# OS + Editors
+.vscode/
+*.log
+.DS_Store
+*.swp
