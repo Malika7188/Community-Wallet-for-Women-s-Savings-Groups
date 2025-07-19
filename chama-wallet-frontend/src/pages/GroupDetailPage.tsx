@@ -1,73 +1,21 @@
-import { useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
-import { useGroups, useGroupBalance, useGroupMutations } from '../hooks/useGroups'
+import React, { useState } from 'react'
+import { useParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { 
-  Users, 
-  Wallet, 
-  Plus, 
-  ArrowLeft, 
-  Copy, 
-  ExternalLink,
-  TrendingUp,
-  UserPlus
-} from 'lucide-react'
+import { useGroups, useGroupBalance } from '../hooks/useGroups'
 import LoadingSpinner from '../components/LoadingSpinner'
-import toast from 'react-hot-toast'
+import GroupManagement from '../components/GroupManagement'
+import AdminNomination from '../components/AdminNomination'
+import PayoutManagement from '../components/PayoutManagement'
+import { Users, Wallet, Settings, Crown, DollarSign } from 'lucide-react'
 
 const GroupDetailPage = () => {
   const { id } = useParams<{ id: string }>()
   const { user } = useAuth()
   const { data: groups, isLoading: groupsLoading } = useGroups()
   const { data: balance, isLoading: balanceLoading } = useGroupBalance(id!)
-  const { joinGroup, contributeToGroup } = useGroupMutations()
-  
-  const [showContributeModal, setShowContributeModal] = useState(false)
-  const [showJoinModal, setShowJoinModal] = useState(false)
-  const [contributeAmount, setContributeAmount] = useState('')
-  const [secretKey, setSecretKey] = useState('')
+  const [activeTab, setActiveTab] = useState('overview')
 
-  const group = groups?.data?.find(g => g.ID === id)
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text)
-    toast.success('Copied to clipboard!')
-  }
-
-  const handleJoinGroup = async () => {
-    if (!user?.wallet) return
-    
-    try {
-      await joinGroup.mutateAsync({
-        id: id!,
-        data: { wallet: user.wallet }
-      })
-      setShowJoinModal(false)
-    } catch (error) {
-      // Error handled by mutation
-    }
-  }
-
-  const handleContribute = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!user?.wallet || !contributeAmount || !secretKey) return
-
-    try {
-      await contributeToGroup.mutateAsync({
-        id: id!,
-        data: {
-          from: user.wallet,
-          secret: secretKey,
-          amount: contributeAmount
-        }
-      })
-      setShowContributeModal(false)
-      setContributeAmount('')
-      setSecretKey('')
-    } catch (error) {
-      // Error handled by mutation
-    }
-  }
+  const group = groups?.find(g => g.ID === id)
 
   if (groupsLoading) {
     return (
@@ -79,292 +27,146 @@ const GroupDetailPage = () => {
 
   if (!group) {
     return (
-      <div className="max-w-2xl mx-auto px-4 py-16 text-center">
-        <h1 className="text-2xl font-bold text-gray-900 mb-4">Group Not Found</h1>
-        <p className="text-gray-600 mb-8">The group you're looking for doesn't exist.</p>
-        <Link to="/groups" className="btn btn-primary">
-          Back to Groups
-        </Link>
+      <div className="text-center py-8">
+        <h2 className="text-2xl font-bold text-gray-900">Group not found</h2>
+        <p className="text-gray-600 mt-2">You don't have access to this group.</p>
       </div>
     )
   }
 
-  const isMember = group.Members?.some(member => member.Wallet === user?.wallet)
-  const groupBalance = balance?.data?.balance || '0'
+  const currentUserMember = group.Members?.find(m => m.UserID === user?.id)
+  const isAdmin = currentUserMember && ['creator', 'admin'].includes(currentUserMember.Role)
+
+  const tabs = [
+    { id: 'overview', label: 'Overview', icon: Users },
+    { id: 'management', label: 'Management', icon: Settings },
+    { id: 'nominations', label: 'Admin Nominations', icon: Crown },
+    { id: 'payouts', label: 'Payouts', icon: DollarSign },
+  ]
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-8">
-        <Link 
-          to="/groups" 
-          className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Groups
-        </Link>
-      </div>
-
+    <div className="max-w-6xl mx-auto px-4 py-8">
       {/* Group Header */}
       <div className="card mb-8">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center mb-4 md:mb-0">
-            <div className="w-16 h-16 bg-gradient-to-r from-stellar-500 to-primary-600 rounded-2xl flex items-center justify-center mr-4">
-              <Users className="w-8 h-8 text-white" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">{group.Name}</h1>
-              <p className="text-gray-600">{group.Description}</p>
-            </div>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">{group.Name}</h1>
+            <p className="text-gray-600 mt-2">{group.Description}</p>
           </div>
-          
-          <div className="flex flex-col sm:flex-row gap-3">
-            {!isMember ? (
-              <button
-                onClick={() => setShowJoinModal(true)}
-                className="btn btn-primary"
-              >
-                <UserPlus className="w-4 h-4 mr-2" />
-                Join Group
-              </button>
-            ) : (
-              <button
-                onClick={() => setShowContributeModal(true)}
-                className="btn btn-primary"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Contribute
-              </button>
-            )}
+          <div className="text-right">
+            <div className="flex items-center space-x-2 mb-2">
+              <Wallet className="w-5 h-5 text-stellar-600" />
+              <span className="text-lg font-semibold">
+                {balanceLoading ? 'Loading...' : `${balance?.data?.balance || '0'} XLM`}
+              </span>
+            </div>
+            <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+              group.Status === 'active' ? 'bg-green-100 text-green-800' :
+              group.Status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+              'bg-gray-100 text-gray-800'
+            }`}>
+              {group.Status.charAt(0).toUpperCase() + group.Status.slice(1)}
+            </span>
+          </div>
+        </div>
+
+        {/* Group Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
+          <div className="bg-blue-50 p-4 rounded-lg">
+            <h3 className="text-sm font-medium text-blue-900">Total Members</h3>
+            <p className="text-2xl font-bold text-blue-600">
+              {group.Members?.filter(m => m.Status === 'approved').length || 0}
+            </p>
+          </div>
+          <div className="bg-green-50 p-4 rounded-lg">
+            <h3 className="text-sm font-medium text-green-900">Contribution Amount</h3>
+            <p className="text-2xl font-bold text-green-600">
+              {group.ContributionAmount || 0} XLM
+            </p>
+          </div>
+          <div className="bg-purple-50 p-4 rounded-lg">
+            <h3 className="text-sm font-medium text-purple-900">Current Round</h3>
+            <p className="text-2xl font-bold text-purple-600">
+              {group.CurrentRound || 0}
+            </p>
+          </div>
+          <div className="bg-yellow-50 p-4 rounded-lg">
+            <h3 className="text-sm font-medium text-yellow-900">Contribution Period</h3>
+            <p className="text-2xl font-bold text-yellow-600">
+              {group.ContributionPeriod || 0} days
+            </p>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Group Stats */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="card">
-              <div className="flex items-center">
-                <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
-                  <Users className="w-6 h-6 text-white" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Members</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {group.Members?.length || 0}
-                  </p>
-                </div>
-              </div>
-            </div>
+      {/* Navigation Tabs */}
+      <div className="border-b border-gray-200 mb-8">
+        <nav className="-mb-px flex space-x-8">
+          {tabs.map((tab) => {
+            const Icon = tab.icon
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
+                  activeTab === tab.id
+                    ? 'border-primary-500 text-primary-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                <span>{tab.label}</span>
+              </button>
+            )
+          })}
+        </nav>
+      </div>
 
+      {/* Tab Content */}
+      <div>
+        {activeTab === 'overview' && (
+          <div className="space-y-6">
+            {/* Members List */}
             <div className="card">
-              <div className="flex items-center">
-                <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
-                  <Wallet className="w-6 h-6 text-white" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Total Balance</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {balanceLoading ? '...' : `${groupBalance} XLM`}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="card">
-              <div className="flex items-center">
-                <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
-                  <TrendingUp className="w-6 h-6 text-white" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Contributions</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {group.Contributions?.length || 0}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Members List */}
-          <div className="card">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Members</h3>
-            {group.Members && group.Members.length > 0 ? (
+              <h3 className="text-lg font-semibold mb-4">Group Members</h3>
               <div className="space-y-3">
-                {group.Members.map((member, index) => (
+                {group.Members?.filter(m => m.Status === 'approved').map((member) => (
                   <div key={member.ID} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-center">
-                      <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
-                        <span className="text-primary-600 font-medium">
-                          {index + 1}
-                        </span>
-                      </div>
-                      <div className="ml-3">
-                        <p className="font-medium text-gray-900">
-                          Member {index + 1}
-                        </p>
-                        <p className="text-sm text-gray-600 font-mono">
-                          {member.Wallet.slice(0, 8)}...{member.Wallet.slice(-8)}
-                        </p>
-                      </div>
+                    <div>
+                      <p className="font-medium">{member.User.name}</p>
+                      <p className="text-sm text-gray-600">{member.User.email}</p>
                     </div>
-                    <button
-                      onClick={() => copyToClipboard(member.Wallet)}
-                      className="p-2 text-gray-400 hover:text-gray-600"
-                    >
-                      <Copy className="w-4 h-4" />
-                    </button>
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${
+                      member.Role === 'creator' ? 'bg-purple-100 text-purple-800' :
+                      member.Role === 'admin' ? 'bg-blue-100 text-blue-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {member.Role}
+                    </span>
                   </div>
                 ))}
               </div>
-            ) : (
-              <div className="text-center py-8">
-                <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600">No members yet</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Group Info Sidebar */}
-        <div className="space-y-6">
-          <div className="card">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Group Wallet</h3>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Wallet Address
-                </label>
-                <div className="flex items-center space-x-2">
-                  <code className="flex-1 text-xs bg-gray-100 p-2 rounded font-mono break-all">
-                    {group.Wallet}
-                  </code>
-                  <button
-                    onClick={() => copyToClipboard(group.Wallet)}
-                    className="p-2 text-gray-400 hover:text-gray-600"
-                  >
-                    <Copy className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-              
-              <a
-                href={`https://stellar.expert/explorer/testnet/account/${group.Wallet}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center text-sm text-primary-600 hover:text-primary-700"
-              >
-                View on Stellar Explorer
-                <ExternalLink className="w-4 h-4 ml-1" />
-              </a>
             </div>
           </div>
+        )}
 
-          {isMember && (
-            <div className="card">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-              <div className="space-y-3">
-                <button
-                  onClick={() => setShowContributeModal(true)}
-                  className="btn btn-primary w-full"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Make Contribution
-                </button>
-                <Link to="/transactions" className="btn btn-outline w-full">
-                  <TrendingUp className="w-4 h-4 mr-2" />
-                  View Transactions
-                </Link>
-              </div>
-            </div>
-          )}
-        </div>
+        {activeTab === 'management' && user && (
+          <GroupManagement 
+            group={group} 
+            currentUser={user}
+            onInviteUser={() => {}} // Implement these handlers
+            onActivateGroup={() => {}}
+          />
+        )}
+
+        {activeTab === 'nominations' && user && (
+          <AdminNomination group={group} currentUser={user} />
+        )}
+
+        {activeTab === 'payouts' && user && (
+          <PayoutManagement group={group} currentUser={user} />
+        )}
       </div>
-
-      {/* Join Group Modal */}
-      {showJoinModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Join Group</h3>
-            <p className="text-gray-600 mb-6">
-              Are you sure you want to join "{group.Name}"? Your wallet address will be added to the group.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowJoinModal(false)}
-                className="btn btn-secondary flex-1"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleJoinGroup}
-                disabled={joinGroup.isPending}
-                className="btn btn-primary flex-1"
-              >
-                {joinGroup.isPending ? 'Joining...' : 'Join Group'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Contribute Modal */}
-      {showContributeModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Make Contribution</h3>
-            <form onSubmit={handleContribute} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Amount (XLM)
-                </label>
-                <input
-                  type="number"
-                  step="0.0000001"
-                  min="0"
-                  required
-                  className="input"
-                  placeholder="Enter amount"
-                  value={contributeAmount}
-                  onChange={(e) => setContributeAmount(e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Your Secret Key
-                </label>
-                <input
-                  type="password"
-                  required
-                  className="input"
-                  placeholder="Enter your secret key"
-                  value={secretKey}
-                  onChange={(e) => setSecretKey(e.target.value)}
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Your secret key is needed to sign the transaction
-                </p>
-              </div>
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowContributeModal(false)}
-                  className="btn btn-secondary flex-1"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={contributeToGroup.isPending}
-                  className="btn btn-primary flex-1"
-                >
-                  {contributeToGroup.isPending ? 'Contributing...' : 'Contribute'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
