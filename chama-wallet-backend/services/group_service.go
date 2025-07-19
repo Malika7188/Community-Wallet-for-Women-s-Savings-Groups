@@ -61,15 +61,24 @@ func AddMemberToGroup(groupID, walletAddress string) (models.Group, error) {
 	return GetGroupByID(groupID) // to return updated group with members
 }
 
-func Contribute(groupID, memberID string, amount float64) error {
-	contribution := models.Contribution{
-		ID:       uuid.New().String(),
-		GroupID:  groupID,
-		MemberID: memberID,
-		Amount:   amount,
-	}
-	return database.DB.Create(&contribution).Error
-}
+// func Contribute(groupID, memberID string, amount float64) error {
+// 	// 1. Call Soroban
+// 	resp, err := ContributeOnChain(fmt.Sprintf("%.0f", amount))
+// 	if err != nil {
+// 		return err
+// 	}
+// 	fmt.Println("On-chain response:", resp)
+
+// 	// 2. Save to DB
+// 	contribution := models.Contribution{
+// 		ID:       uuid.New().String(),
+// 		GroupID:  groupID,
+// 		MemberID: memberID,
+// 		Amount:   amount,
+// 	}
+// 	return database.DB.Create(&contribution).Error
+// }
+
 func GetGroupWithMembers(groupID string) (models.Group, error) {
 	var group models.Group
 	err := database.DB.Preload("Members").First(&group, "id = ?", groupID).Error

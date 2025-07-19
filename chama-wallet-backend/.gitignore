@@ -14,7 +14,7 @@ vendor/
 target/
 
 # Environment
-.env
+# .env
 
 # OS + Editors
 .vscode/

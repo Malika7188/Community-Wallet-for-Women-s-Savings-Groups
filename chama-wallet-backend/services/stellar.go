@@ -38,19 +38,19 @@ func FundWallet(address string) error {
 }
 
 // GetBalance returns the XLM balance of a wallet
-func GetBalance(address string) (string, error) {
-	ar := horizonclient.AccountRequest{AccountID: address}
-	account, err := client.AccountDetail(ar)
-	if err != nil {
-		return "", err
-	}
-	for _, b := range account.Balances {
-		if b.Asset.Type == "native" {
-			return b.Balance, nil
-		}
-	}
-	return "0", nil
-}
+// func GetBalance(address string) (string, error) {
+// 	ar := horizonclient.AccountRequest{AccountID: address}
+// 	account, err := client.AccountDetail(ar)
+// 	if err != nil {
+// 		return "", err
+// 	}
+// 	for _, b := range account.Balances {
+// 		if b.Asset.Type == "native" {
+// 			return b.Balance, nil
+// 		}
+// 	}
+// 	return "0", nil
+// }
 
 // SendXLM transfers XLM from sender to receiver
 func SendXLM(seed, destination, amount string) (horizon.Transaction, error) {
