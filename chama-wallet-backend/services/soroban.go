@@ -2,13 +2,10 @@
 package services
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/stellar/go/clients/horizonclient"
 	"github.com/stellar/go/network"
@@ -34,63 +31,50 @@ type SorobanInvokeRequest struct {
 	Args       []interface{} `json:"args"`
 }
 
+// CallSorobanFunction executes a Soroban contract function
 func CallSorobanFunction(contractID, functionName string, args []string) (string, error) {
-	cmdArgs := []string{
+	// Updated command structure based on the new Soroban CLI syntax
+	cmd := []string{
 		"contract", "invoke",
-		"--rpc-url", "https://soroban-testnet.stellar.org:443",
-		"--network-passphrase", "Test SDF Network ; September 2015",
 		"--id", contractID,
-		"--source", "malika",
-		"--fn", functionName,
+		"--source-account", "<WALLET_ADDRESS>", // Replace with actual source account
+		"--network", "testnet",
+		"--",
+		functionName,
 	}
 
-	// Append args as --arg <value>
-	for _, arg := range args {
-		cmdArgs = append(cmdArgs, "--arg", arg)
-	}
+	// Add the function arguments
+	cmd = append(cmd, args...)
 
-	cmd := exec.Command("soroban", cmdArgs...)
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	err := cmd.Run()
+	// Execute the command
+	out, err := exec.Command("soroban", cmd...).CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("soroban error: %s", stderr.String())
+		return "", fmt.Errorf("soroban error: %s", string(out))
 	}
 
-	return stdout.String(), nil
+	return strings.TrimSpace(string(out)), nil
 }
 
-func SorobanContribute(userAddress string, amount string) ([]byte, error) {
-	sorobanRPC := "https://rpc-futurenet.stellar.org"
-	contractID := "CADHKUC557DJ2F2XGEO4BGHFIYQ6O5QDVNG637ANRAGPBSWXMXXPMOI4"
+// Contribute function wrapper
+func Contribute(contractID, userAddress, amount string) (string, error) {
+	args := []string{userAddress, amount}
+	return CallSorobanFunction(contractID, "contribute", args)
+}
 
-	payload := SorobanInvokeRequest{
-		ContractID: contractID,
-		Function:   "contribute",
-		Args:       []interface{}{userAddress, amount},
-	}
+// GetBalance function wrapper
+func GetBalance(contractID, userAddress string) (string, error) {
+	args := []string{userAddress}
+	return CallSorobanFunction(contractID, "get_balance", args)
+}
 
-	jsonData, err := json.Marshal(payload)
-	if err != nil {
-		return nil, fmt.Errorf("marshal payload: %w", err)
-	}
+// Withdraw function wrapper
+func Withdraw(contractID, userAddress, amount string) (string, error) {
+	args := []string{userAddress, amount}
+	return CallSorobanFunction(contractID, "withdraw", args)
+}
 
-	resp, err := http.Post(sorobanRPC+"/functions/invoke", "application/json", bytes.NewReader(jsonData))
-	if err != nil {
-		return nil, fmt.Errorf("http post failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("read response: %w", err)
-	}
-
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("non-200 from RPC: %s", string(body))
-	}
-
-	return body, nil
+// GetContributionHistory function wrapper
+func GetContributionHistory(contractID, userAddress string) (string, error) {
+	args := []string{userAddress}
+	return CallSorobanFunction(contractID, "get_contribution_history", args)
 }
