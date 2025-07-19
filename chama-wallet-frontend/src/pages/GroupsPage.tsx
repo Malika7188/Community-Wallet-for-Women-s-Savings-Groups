@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useGroups } from '../hooks/useGroups'
 import { Users, Plus, Search, Filter } from 'lucide-react'
 import LoadingSpinner from '../components/LoadingSpinner'
+import GroupCard from '../components/GroupCard'
 
 const GroupsPage = () => {
   const { data: groups, isLoading } = useGroups()
@@ -83,37 +84,7 @@ const GroupsPage = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredGroups.map((group) => (
-            <Link
-              key={group.ID}
-              to={`/groups/${group.ID}`}
-              className="card hover:shadow-md transition-shadow"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-12 h-12 bg-gradient-to-r from-stellar-500 to-primary-600 rounded-lg flex items-center justify-center">
-                  <Users className="w-6 h-6 text-white" />
-                </div>
-                <span className="text-sm text-gray-500">
-                  {group.Members?.length || 0} members
-                </span>
-              </div>
-              
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                {group.Name}
-              </h3>
-              
-              <p className="text-gray-600 mb-4 line-clamp-2">
-                {group.Description}
-              </p>
-              
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-500">
-                  Total Savings: 0 XLM
-                </span>
-                <span className="text-primary-600 font-medium">
-                  View Details →
-                </span>
-              </div>
-            </Link>
+            <GroupCard key={group.ID} group={group} />
           ))}
         </div>
       )}
