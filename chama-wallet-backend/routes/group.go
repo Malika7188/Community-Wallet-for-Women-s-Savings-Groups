@@ -20,7 +20,24 @@ func GroupRoutes(app *fiber.App) {
 
 	// Protected routes (require authentication)
 	app.Post("/group/create", middleware.AuthMiddleware(), handlers.CreateGroup)
+	app.Get("/user/groups", middleware.AuthMiddleware(), handlers.GetUserGroups)
 	app.Post("/group/:id/contribute", middleware.AuthMiddleware(), handlers.ContributeToGroup)
-	app.Post("/group/:id/join", middleware.AuthMiddleware(), handlers.AddMember)
-
+	app.Post("/group/:id/join", middleware.AuthMiddleware(), handlers.JoinGroup)
+	
+	// New routes
+	app.Post("/group/:id/invite", middleware.AuthMiddleware(), handlers.InviteToGroup)
+	app.Get("/group/:id/non-members", middleware.AuthMiddleware(), handlers.GetNonGroupMembers)
+	app.Post("/group/:id/activate", middleware.AuthMiddleware(), handlers.ActivateGroup)
+	app.Post("/group/:id/nominate-admin", middleware.AuthMiddleware(), handlers.NominateAdmin)
+	app.Post("/group/:id/approve-member", middleware.AuthMiddleware(), handlers.ApproveMember)
+	app.Post("/group/:id/payout-request", middleware.AuthMiddleware(), handlers.CreatePayoutRequest)
+	app.Post("/payout/:id/approve", middleware.AuthMiddleware(), handlers.ApprovePayoutRequest)
+	app.Get("/group/:id/payout-requests", middleware.AuthMiddleware(), handlers.GetPayoutRequests)
+	
+	// Notification routes
+	app.Get("/notifications", middleware.AuthMiddleware(), handlers.GetNotifications)
+	app.Put("/notifications/:id/read", middleware.AuthMiddleware(), handlers.MarkNotificationRead)
+	app.Get("/invitations", middleware.AuthMiddleware(), handlers.GetUserInvitations)
+	app.Post("/invitations/:id/accept", middleware.AuthMiddleware(), handlers.AcceptInvitation)
+	app.Post("/invitations/:id/reject", middleware.AuthMiddleware(), handlers.RejectInvitation)
 }
