@@ -28,3 +28,11 @@ To: GC6HUPHYW33367DVMFX72AFPREAA53QD3SMTCVUQ5BKMHHWGKVE4U3JQ
 
   get groups
   curl http://localhost:3000/groups
+
+  - stellar instalation
+  ```bash
+  sudo apt update && sudo apt install -y libudev-dev pkg-config
+  cargo install stellar-cli --locked --version 23.0.0
+  stellar --version
+
+ ``` 
