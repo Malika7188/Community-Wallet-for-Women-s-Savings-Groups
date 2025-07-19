@@ -3,7 +3,7 @@ package handlers
 import (
 	"github.com/gofiber/fiber/v2"
 
-	"chama-wallet-backend/middleware"
+	// "chama-wallet-backend/middleware"
 	"chama-wallet-backend/services"
 )
 
