@@ -13,7 +13,7 @@ import (
 	"github.com/stellar/go/txnbuild"
 )
 
-var client = horizonclient.DefaultTestNetClient
+// var client = horizonclient.DefaultTestNetClient
 
 // CreateWallet generates a new Stellar keypair
 func CreateWallet() (string, string) {

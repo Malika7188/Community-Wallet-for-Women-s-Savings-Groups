@@ -2,8 +2,10 @@ package handlers
 
 import (
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 
-	// "chama-wallet-backend/middleware"
+	"chama-wallet-backend/database"
+	"chama-wallet-backend/models"
 	"chama-wallet-backend/services"
 )
 
@@ -13,21 +15,39 @@ type CreateGroupRequest struct {
 }
 
 func CreateGroup(c *fiber.Ctx) error {
-	var req CreateGroupRequest
-	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid request",
-		})
+	var payload struct {
+		Name   string `json:"name"`
+		Wallet string `json:"wallet"`
+		Admin  string `json:"admin"` // Optional: If the creator is stored
 	}
 
-	group, err := services.CreateGroup(req.Name, req.Description)
+	if err := c.BodyParser(&payload); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid body"})
+	}
+
+	// ✅ Step 1: Deploy contract using CLI (or pre-deployed if needed)
+	contractID, err := services.DeployChamaContract()
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": err.Error(),
-		})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to deploy contract"})
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(group)
+	// ✅ Step 2: Save group in DB with the new contractID
+	group := models.Group{
+		ID:         uuid.NewString(),
+		Name:       payload.Name,
+		Wallet:     payload.Wallet,
+		ContractID: contractID,
+	}
+
+	if err := database.DB.Create(&group).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to save group"})
+	}
+
+	return c.JSON(fiber.Map{
+		"message":     "Group created",
+		"group":       group,
+		"contract_id": contractID,
+	})
 }
 
 func AddMember(c *fiber.Ctx) error {

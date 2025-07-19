@@ -28,6 +28,9 @@ func main() {
         AllowCredentials: true,
     }))
 	routes.Setup(app)
+	routes.SetupSorobanRoutes(app)
+	
+
 	// routes.GroupRoutes(app)
 
 	fmt.Println("✅ Setting up group routes...")

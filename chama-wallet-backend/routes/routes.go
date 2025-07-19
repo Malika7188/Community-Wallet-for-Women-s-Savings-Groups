@@ -21,7 +21,6 @@ func Setup(app *fiber.App) {
 	
 	// Protected wallet routes
 	app.Post("/transfer", middleware.AuthMiddleware(), handlers.TransferFunds)
-	
-
+	app.Post("/api/contribute", handlers.ContributeHandler)
 
 }

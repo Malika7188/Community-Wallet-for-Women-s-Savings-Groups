@@ -7,6 +7,7 @@ toolchain go1.23.11
 require (
 	github.com/gofiber/fiber/v2 v2.52.8
 	github.com/google/uuid v1.6.0
+	github.com/joho/godotenv v1.5.1
 	github.com/stellar/go v0.0.0-20250718194041-56335b4c7e0c
 	gorm.io/driver/postgres v1.6.0
 	gorm.io/gorm v1.30.0
