@@ -11,14 +11,29 @@ export interface Group {
   Name: string
   Description: string
   Wallet: string
+  CreatorID: string
+  Creator: User
   Members?: Member[]
   Contributions?: Contribution[]
+  Status: 'pending' | 'active' | 'completed'
+  ContributionAmount?: number
+  ContributionPeriod?: number
+  PayoutOrder?: string
+  CurrentRound?: number
+  MaxMembers?: number
+  CreatedAt: string
+  UpdatedAt: string
 }
 
 export interface Member {
   ID: string
   GroupID: string
+  UserID: string
+  User: User
   Wallet: string
+  Role: 'member' | 'admin' | 'creator'
+  JoinedAt: string
+  Status: 'pending' | 'approved' | 'rejected'
 }
 
 export interface Contribution {
@@ -60,4 +75,62 @@ export interface ContributeRequest {
   from: string
   secret: string
   amount: string
+}
+
+export interface GroupInvitation {
+  ID: string
+  GroupID: string
+  Group: Group
+  InviterID: string
+  Inviter: User
+  Email: string
+  UserID?: string
+  User?: User
+  Status: 'pending' | 'accepted' | 'rejected'
+  CreatedAt: string
+  ExpiresAt: string
+}
+
+export interface Notification {
+  ID: string
+  UserID: string
+  GroupID: string
+  Group: Group
+  Type: string
+  Title: string
+  Message: string
+  Read: boolean
+  CreatedAt: string
+}
+
+export interface InviteUserRequest {
+  email: string
+}
+
+export interface ActivateGroupRequest {
+  contribution_amount: number
+  contribution_period: number
+  payout_order: string
+}
+
+export interface PayoutRequest {
+  ID: string
+  GroupID: string
+  Group: Group
+  RecipientID: string
+  Recipient: User
+  Amount: number
+  Round: number
+  Status: 'pending' | 'approved' | 'rejected' | 'completed'
+  Approvals?: PayoutApproval[]
+  CreatedAt: string
+}
+
+export interface PayoutApproval {
+  ID: string
+  PayoutRequestID: string
+  AdminID: string
+  Admin: User
+  Approved: boolean
+  CreatedAt: string
 }
