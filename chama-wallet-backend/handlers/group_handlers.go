@@ -134,14 +134,24 @@ func InviteToGroup(c *fiber.Ctx) error {
 	// Create notification for invited user
 	var group models.Group
 	database.DB.First(&group, "id = ?", groupID)
-	
-	services.CreateNotification(
-		invitedUser.ID,
-		groupID,
-		"group_invitation",
-		"Group Invitation",
-		fmt.Sprintf("You have been invited to join %s by %s", group.Name, user.Name),
-	)
+
+	notification := models.Notification{
+		ID:        uuid.NewString(),
+		UserID:    invitedUser.ID,
+		GroupID:   groupID,
+		Type:      "group_invitation",
+		Title:     "Group Invitation",
+		Message:   fmt.Sprintf("You have been invited to join %s by %s", group.Name, user.Name),
+		Status:    "unread",
+		Read:      false,
+		CreatedAt: time.Now(),
+	}
+
+	if err := database.DB.Create(&notification).Error; err != nil {
+		fmt.Printf("⚠️ Failed to create notification: %v\n", err)
+	} else {
+		fmt.Printf("✅ Notification created for user %s\n", invitedUser.ID)
+	}
 
 	return c.JSON(fiber.Map{"message": "Invitation sent successfully"})
 }
