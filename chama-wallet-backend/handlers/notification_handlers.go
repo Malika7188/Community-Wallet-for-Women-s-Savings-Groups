@@ -1,13 +1,14 @@
 package handlers
 
 import (
-	"chama-wallet-backend/database"
-	"chama-wallet-backend/models"
-	"chama-wallet-backend/services"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+
+	"chama-wallet-backend/database"
+	"chama-wallet-backend/models"
+	"chama-wallet-backend/services"
 )
 
 func GetNotifications(c *fiber.Ctx) error {

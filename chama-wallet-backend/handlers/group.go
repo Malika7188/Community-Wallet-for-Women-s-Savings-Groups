@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"time"
+	"chama-wallet-backend/utils"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -31,16 +32,14 @@ func CreateGroup(c *fiber.Ctx) error {
 	user := c.Locals("user").(models.User)
 
 	// Generate wallet for the group
-	wallet, err := services.GenerateStellarWallet()
+	wallet, err := utils.GenerateStellarWallet()
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to generate wallet"})
 	}
 
 	// ✅ Step 1: Deploy contract using CLI (or pre-deployed if needed)
-	contractID, err := services.DeployChamaContract()
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to deploy contract"})
-	}
+	// For now, use a placeholder contract ID or generate one
+	contractID := "CADHKUC557DJ2F2XGEO4BGHFIYQ6O5QDVNG637ANRAGPBSWXMXXPMOI4"
 
 	// ✅ Step 2: Save group in DB with the new contractID
 	group := models.Group{
@@ -159,7 +158,7 @@ func GetGroupBalance(c *fiber.Ctx) error {
 	}
 
 	// Fetch the balance from Stellar
-	balance, err := services.GetBalance(group.Wallet, group.Name)
+	balance, err := services.CheckBalance(group.Wallet)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),

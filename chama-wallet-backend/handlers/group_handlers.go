@@ -146,17 +146,6 @@ func InviteToGroup(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"message": "Invitation sent successfully"})
 }
 
-func GetNonGroupMembers(c *fiber.Ctx) error {
-	groupID := c.Params("id")
-
-	users, err := services.GetNonGroupMembers(groupID)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
-	}
-
-	return c.JSON(users)
-}
-
 func ApproveGroup(c *fiber.Ctx) error {
 	groupID := c.Params("id")
 	user := c.Locals("user").(models.User)
@@ -270,9 +259,6 @@ func JoinGroup(c *fiber.Ctx) error {
 	groupID := c.Params("id")
 	user := c.Locals("user").(models.User)
 
-	// Use user's wallet address
-	walletAddress := user.Wallet
-
 	// Check if group exists and is active
 	var group models.Group
 	if err := database.DB.First(&group, "id = ?", groupID).Error; err != nil {
@@ -300,7 +286,7 @@ func JoinGroup(c *fiber.Ctx) error {
 		ID:       uuid.NewString(),
 		GroupID:  groupID,
 		UserID:   user.ID,
-		Wallet:   walletAddress,
+		Wallet:   user.Wallet,
 		Role:     "member",
 		Status:   "pending",
 		JoinedAt: time.Now(),

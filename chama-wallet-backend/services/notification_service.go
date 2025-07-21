@@ -41,9 +41,10 @@ func MarkNotificationAsRead(notificationID string) error {
 func SendContributionReminders() error {
 	// Find active groups with upcoming contribution deadlines (5 days)
 	var groups []models.Group
-	fiveDaysFromNow := time.Now().AddDate(0, 0, 5)
+	fiveDaysFromNow := time.Now().Add(5 * 24 * time.Hour)
 
-	if err := database.DB.Where("status = ? AND next_contribution_date <= ?", "active", fiveDaysFromNow).Find(&groups).Error; err != nil {
+	if err := database.DB.Where("status = ? AND next_contribution_date BETWEEN ? AND ?", 
+		"active", time.Now(), fiveDaysFromNow).Find(&groups).Error; err != nil {
 		return err
 	}
 
