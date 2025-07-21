@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -13,12 +14,15 @@ import (
 
 func GetNotifications(c *fiber.Ctx) error {
 	user := c.Locals("user").(models.User)
+	fmt.Printf("🔍 Getting notifications for user: %s\n", user.ID)
 
 	notifications, err := services.GetUserNotifications(user.ID)
 	if err != nil {
+		fmt.Printf("❌ Error getting notifications: %v\n", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
+	fmt.Printf("✅ Found %d notifications for user %s\n", len(notifications), user.ID)
 	return c.JSON(notifications)
 }
 
@@ -41,6 +45,7 @@ func MarkNotificationRead(c *fiber.Ctx) error {
 
 func GetUserInvitations(c *fiber.Ctx) error {
 	user := c.Locals("user").(models.User)
+	fmt.Printf("🔍 Getting invitations for user: %s (email: %s)\n", user.ID, user.Email)
 
 	var invitations []models.GroupInvitation
 	err := database.DB.Where("email = ? AND status = ?", user.Email, "pending").
@@ -49,9 +54,11 @@ func GetUserInvitations(c *fiber.Ctx) error {
 		Find(&invitations).Error
 
 	if err != nil {
+		fmt.Printf("❌ Error getting invitations: %v\n", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
+	fmt.Printf("✅ Found %d invitations for user %s\n", len(invitations), user.Email)
 	return c.JSON(invitations)
 }
 
@@ -78,14 +85,14 @@ func AcceptInvitation(c *fiber.Ctx) error {
 		"user_id": user.ID,
 	})
 
-	// Add user as member
+	// Add user as member with approved status (since they were invited)
 	member := models.Member{
 		ID:       uuid.NewString(),
 		GroupID:  invitation.GroupID,
 		UserID:   user.ID,
 		Wallet:   user.Wallet,
 		Role:     "member",
-		Status:   "pending", // Requires admin approval
+		Status:   "approved", // Auto-approve invited users
 		JoinedAt: time.Now(),
 	}
 
@@ -93,7 +100,7 @@ func AcceptInvitation(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	// Notify group admins
+	// Notify group admins about new member (not request)
 	var admins []models.Member
 	database.DB.Where("group_id = ? AND role IN ? AND status = ?",
 		invitation.GroupID, []string{"creator", "admin"}, "approved").Find(&admins)
@@ -102,11 +109,20 @@ func AcceptInvitation(c *fiber.Ctx) error {
 		services.CreateNotification(
 			admin.UserID,
 			invitation.GroupID,
-			"new_member_request",
-			"New Member Request",
-			user.Name+" has accepted an invitation and requests to join the group",
+			"new_member_joined",
+			"New Member Joined",
+			user.Name+" has joined the group",
 		)
 	}
+
+	// Notify the user that they successfully joined
+	services.CreateNotification(
+		user.ID,
+		invitation.GroupID,
+		"membership_approved",
+		"Welcome to the Group",
+		"You have successfully joined the group",
+	)
 
 	return c.JSON(fiber.Map{"message": "Invitation accepted successfully"})
 }

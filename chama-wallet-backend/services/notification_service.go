@@ -27,8 +27,13 @@ func GetUserNotifications(userID string) ([]models.Notification, error) {
 	err := database.DB.
 		Where("user_id = ?", userID).
 		Preload("Group").
+		Preload("User").
 		Order("created_at DESC").
 		Find(&notifications).Error
+	
+	fmt.Printf("🔍 Query: SELECT * FROM notifications WHERE user_id = '%s'\n", userID)
+	fmt.Printf("✅ Found %d notifications in database\n", len(notifications))
+	
 	return notifications, err
 }
 
