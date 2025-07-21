@@ -1,10 +1,8 @@
-import React, { useState } from 'react'
-import { Users, Settings, UserPlus, CheckCircle } from 'lucide-react'
 import React, { useState, useEffect } from 'react'
 import { Users, Settings, UserPlus, CheckCircle } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { groupApi } from '../services/api'
-import toast from 'react-hot-toast'
+import { toast } from 'react-hot-toast'
+import { groupApi } from '../api/groups'
 import type { Group, User } from '../types'
 
 interface GroupManagementProps {
@@ -325,46 +323,6 @@ const GroupManagement: React.FC<GroupManagementProps> = ({
                       contribution_amount: parseFloat(e.target.value)
                     })}
                     className="input"
-                  required
-                />
-              </div>
-              <div className="flex space-x-3">
-                <button
-                  type="button"
-                  onClick={() => setShowInviteModal(false)}
-                  className="btn btn-secondary flex-1"
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-primary flex-1">
-                  Send Invite
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Activate Group Modal */}
-      {showActivateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold mb-4">Activate Group</h3>
-            <form onSubmit={handleActivate}>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Contribution Amount (XLM)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={groupSettings.contribution_amount}
-                    onChange={(e) => setGroupSettings({
-                      ...groupSettings,
-                      contribution_amount: parseFloat(e.target.value)
-                    })}
-                    className="input"
                     required
                   />
                 </div>
@@ -412,24 +370,6 @@ const GroupManagement: React.FC<GroupManagementProps> = ({
                       </div>
                     ))}
                   </div>
-                </div>
-              </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Contribution Period (days)
-                  </label>
-                  <select
-                    value={groupSettings.contribution_period}
-                    onChange={(e) => setGroupSettings({
-                      ...groupSettings,
-                      contribution_period: parseInt(e.target.value)
-                    })}
-                    className="input"
-                  >
-                    <option value={7}>Weekly</option>
-                    <option value={14}>Bi-weekly</option>
-                    <option value={30}>Monthly</option>
-                  </select>
                 </div>
               </div>
               <div className="flex space-x-3 mt-6">
