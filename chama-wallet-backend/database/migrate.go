@@ -17,6 +17,7 @@ func RunMigrations() {
         &models.AdminNomination{},
         &models.PayoutRequest{},
         &models.PayoutApproval{},
+        &models.PayoutSchedule{},
         &models.Notification{},
     )
     

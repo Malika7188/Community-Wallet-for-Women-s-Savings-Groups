@@ -87,6 +87,7 @@ export const groupApi = {
   approveMember: (id: string, data: { member_id: string, action: string }) => api.post(`/group/${id}/approve-member`, data),
   createPayoutRequest: (id: string, data: any) => api.post(`/group/${id}/payout-request`, data),
   getPayoutRequests: (id: string) => api.get(`/group/${id}/payout-requests`),
+  getPayoutSchedule: (id: string) => api.get(`/group/${id}/payout-schedule`),
 }
 
 export const payoutApi = {

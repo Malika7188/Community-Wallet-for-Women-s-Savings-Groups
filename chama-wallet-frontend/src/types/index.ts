@@ -137,3 +137,18 @@ export interface PayoutApproval {
   Approved: boolean
   CreatedAt: string
 }
+
+export interface PayoutSchedule {
+  ID: string
+  GroupID: string
+  MemberID: string
+  Member: Member
+  Round: number
+  Amount: number
+  DueDate: string
+  Status: 'scheduled' | 'paid' | 'pending'
+  PaidAt?: string
+  TxHash?: string
+  CreatedAt: string
+  UpdatedAt: string
+}

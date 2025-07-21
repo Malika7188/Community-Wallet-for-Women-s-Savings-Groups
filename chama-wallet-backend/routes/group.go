@@ -34,6 +34,7 @@ func GroupRoutes(app *fiber.App) {
 	app.Post("/group/:id/payout-request", middleware.AuthMiddleware(), handlers.CreatePayoutRequest)
 	app.Post("/payout/:id/approve", middleware.AuthMiddleware(), handlers.ApprovePayoutRequest)
 	app.Get("/group/:id/payout-requests", middleware.AuthMiddleware(), handlers.GetPayoutRequests)
+	app.Get("/group/:id/payout-schedule", middleware.AuthMiddleware(), handlers.GetPayoutSchedule)
 	
 	// Notification routes
 	app.Get("/notifications", middleware.AuthMiddleware(), handlers.GetNotifications)

@@ -202,8 +202,8 @@ func ActivateGroup(c *fiber.Ctx) error {
 	user := c.Locals("user").(models.User)
 
 	var payload struct {
-		ContributionAmount float64 `json:"contribution_amount"`
-		ContributionPeriod int     `json:"contribution_period"`
+		ContributionAmount float64  `json:"contribution_amount"`
+		ContributionPeriod int      `json:"contribution_period"`
 		PayoutOrder        []string `json:"payout_order"`
 	}
 
@@ -211,11 +211,14 @@ func ActivateGroup(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid body"})
 	}
 
+	// Debug logging
+	fmt.Printf("Received payout order: %+v\n", payload.PayoutOrder)
+
 	// Check if user is admin/creator
 	var admin models.Member
-	if err := database.DB.Where("group_id = ? AND user_id = ? AND role IN ?", 
+	if err := database.DB.Where("group_id = ? AND user_id = ? AND role IN ?",
 		groupID, user.ID, []string{"creator", "admin"}).First(&admin).Error; err != nil {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Insufficient permissions"})
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Only admins can activate groups"})
 	}
 
 	// Check if group is approved
@@ -228,40 +231,73 @@ func ActivateGroup(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Group must be approved before activation"})
 	}
 
-	// Calculate next contribution date
-	nextContributionDate := time.Now().AddDate(0, 0, payload.ContributionPeriod)
+	// Validate payout order
+	if len(payload.PayoutOrder) == 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Payout order cannot be empty"})
+	}
 
 	// Convert payout order to JSON string
 	payoutOrderJSON, err := json.Marshal(payload.PayoutOrder)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to process payout order"})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid payout order"})
 	}
 
-	// Update group with activation settings
+	fmt.Printf("Payout order JSON: %s\n", string(payoutOrderJSON))
+
+	// Calculate next contribution date
+	nextContributionDate := time.Now().AddDate(0, 0, payload.ContributionPeriod)
+
+	// Update group
 	updates := map[string]interface{}{
-		"status": "active",
-		"contribution_amount": payload.ContributionAmount,
-		"contribution_period": payload.ContributionPeriod,
-		"payout_order": string(payoutOrderJSON),
+		"status":                "active",
+		"contribution_amount":   payload.ContributionAmount,
+		"contribution_period":   payload.ContributionPeriod,
+		"payout_order":         string(payoutOrderJSON),
+		"current_round":        1,
 		"next_contribution_date": nextContributionDate,
 	}
 
-	if err := database.DB.Model(&models.Group{}).Where("id = ?", groupID).Updates(updates).Error; err != nil {
+	if err := database.DB.Model(&group).Where("id = ?", groupID).Updates(updates).Error; err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	// Notify all members about activation
+	// Create payout schedule entries
 	var members []models.Member
 	database.DB.Where("group_id = ? AND status = ?", groupID, "approved").Find(&members)
 
-	for _, member := range members {
-		services.CreateNotification(
-			member.UserID,
-			groupID,
-			"group_activated",
-			"Group Activated",
-			fmt.Sprintf("Your group is now active! Contribution amount: %.2f XLM every %d days", payload.ContributionAmount, payload.ContributionPeriod),
-		)
+	totalPayout := payload.ContributionAmount * float64(len(members))
+	startDate := time.Now()
+
+	for i, memberID := range payload.PayoutOrder {
+		// Find the member
+		var member models.Member
+		for _, m := range members {
+			if m.UserID == memberID {
+				member = m
+				break
+			}
+		}
+		
+		if member.ID == "" {
+			continue // Skip if member not found
+		}
+		
+		// Calculate due date for this round
+		dueDate := startDate.AddDate(0, 0, i*payload.ContributionPeriod)
+		
+		schedule := models.PayoutSchedule{
+			ID:        uuid.NewString(),
+			GroupID:   groupID,
+			MemberID:  member.ID,
+			Round:     i + 1,
+			Amount:    totalPayout,
+			DueDate:   dueDate,
+			Status:    "scheduled",
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		}
+		
+		database.DB.Create(&schedule)
 	}
 
 	return c.JSON(fiber.Map{"message": "Group activated successfully"})
@@ -332,4 +368,28 @@ func JoinGroup(c *fiber.Ctx) error {
 		"message": "Join request sent successfully",
 		"member":  member,
 	})
+}
+
+func GetPayoutSchedule(c *fiber.Ctx) error {
+	groupID := c.Params("id")
+	user := c.Locals("user").(models.User)
+
+	// Check if user is member of the group
+	var member models.Member
+	if err := database.DB.Where("group_id = ? AND user_id = ? AND status = ?",
+		groupID, user.ID, "approved").First(&member).Error; err != nil {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Not a group member"})
+	}
+
+	var schedules []models.PayoutSchedule
+	err := database.DB.Where("group_id = ?", groupID).
+		Preload("Member.User").
+		Order("round ASC").
+		Find(&schedules).Error
+
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.JSON(schedules)
 }

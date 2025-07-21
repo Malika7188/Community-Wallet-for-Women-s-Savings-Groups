@@ -115,7 +115,23 @@ type Contribution struct {
 }
 
 type GroupSettings struct {
-	ContributionAmount float64 `json:"contribution_amount"`
-	ContributionPeriod int     `json:"contribution_period"`
-	PayoutOrder        string  `json:"payout_order"`
+	ContributionAmount float64  `json:"contribution_amount"`
+	ContributionPeriod int      `json:"contribution_period"`
+	PayoutOrder        []string `json:"payout_order"`
+}
+
+type PayoutSchedule struct {
+	ID        string    `gorm:"primaryKey"`
+	GroupID   string
+	Group     Group     `gorm:"foreignKey:GroupID"`
+	MemberID  string
+	Member    Member    `gorm:"foreignKey:MemberID"`
+	Round     int
+	Amount    float64
+	DueDate   time.Time `gorm:"column:due_date"`
+	Status    string    `gorm:"default:scheduled"` // scheduled, paid, pending
+	PaidAt    *time.Time `gorm:"column:paid_at"`
+	TxHash    string     `gorm:"column:tx_hash"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
