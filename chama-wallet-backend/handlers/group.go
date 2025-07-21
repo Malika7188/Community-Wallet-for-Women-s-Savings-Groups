@@ -34,14 +34,25 @@ func CreateGroup(c *fiber.Ctx) error {
 	// Generate wallet for the group
 	wallet, err := utils.GenerateStellarWallet()
 	if err != nil {
+		fmt.Printf("❌ Failed to generate group wallet: %v\n", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to generate wallet"})
 	}
 
-	// ✅ Step 1: Deploy contract using CLI (or pre-deployed if needed)
-	// For now, use a placeholder contract ID or generate one
-	// contractID := "CADHKUC557DJ2F2XGEO4BGHFIYQ6O5QDVNG637ANRAGPBSWXMXXPMOI4"
+	fmt.Printf("✅ Generated group wallet: %s\n", wallet.PublicKey)
+
+	// Fund the group wallet on testnet
+	err = services.FundTestAccount(wallet.PublicKey)
+	if err != nil {
+		fmt.Printf("⚠️ Warning: Failed to fund group wallet: %v\n", err)
+		// Don't fail the group creation, just log the warning
+	} else {
+		fmt.Printf("✅ Group wallet funded successfully\n")
+	}
+
+	// Deploy contract
 	contractID, err := services.DeployChamaContract()
 	if err != nil {
+		fmt.Printf("❌ Failed to deploy contract: %v\n", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to deploy contract"})
 	}
 
@@ -57,11 +68,11 @@ func CreateGroup(c *fiber.Ctx) error {
 	}
 
 	if err := database.DB.Create(&group).Error; err != nil {
-		fmt.Printf("❌ Failed to create group: %v\n", err) // Add debug log
+		fmt.Printf("❌ Failed to create group: %v\n", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to save group"})
 	}
 
-	fmt.Printf("✅ Group created successfully: %+v\n", group) // Add debug log
+	fmt.Printf("✅ Group created successfully: %+v\n", group)
 
 	// Add the creator as the first member with creator role and approved status
 	member := models.Member{
@@ -76,7 +87,8 @@ func CreateGroup(c *fiber.Ctx) error {
 
 	err = database.DB.Create(&member).Error
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to add creator as member"})
+		fmt.Printf("⚠️ Warning: Failed to add creator as member: %v\n", err)
+		// Don't fail the group creation
 	}
 
 	return c.JSON(fiber.Map{
