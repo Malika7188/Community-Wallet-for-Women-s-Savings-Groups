@@ -166,11 +166,13 @@ func ApproveGroup(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Only group creator can approve the group"})
 	}
 
-	// Check if group is full
+	// Check if group has minimum members
 	var memberCount int64
 	database.DB.Model(&models.Member{}).Where("group_id = ? AND status = ?", groupID, "approved").Count(&memberCount)
-	if memberCount < int64(group.MaxMembers) {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Group must be full before approval"})
+	if memberCount < int64(group.MinMembers) {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": fmt.Sprintf("Group needs at least %d members before approval (currently has %d)", group.MinMembers, memberCount),
+		})
 	}
 
 	// Update group approval status

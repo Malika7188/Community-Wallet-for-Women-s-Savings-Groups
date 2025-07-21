@@ -21,6 +21,7 @@ export interface Group {
   PayoutOrder?: string
   CurrentRound?: number
   MaxMembers?: number
+  MinMembers?: number
   NextContributionDate?: string
   IsApproved?: boolean
   CreatedAt: string

@@ -82,7 +82,8 @@ const GroupManagement: React.FC<GroupManagementProps> = ({
 
   const approvedMembers = group.Members?.filter(m => m.Status === 'approved') || []
   const pendingMembers = group.Members?.filter(m => m.Status === 'pending') || []
-  const isGroupFull = approvedMembers.length >= (group.MaxMembers || 10)
+  const hasMinimumMembers = approvedMembers.length >= (group.MinMembers || 3)
+  const isGroupFull = approvedMembers.length >= (group.MaxMembers || 20)
 
   const handleInvite = (e: React.FormEvent) => {
     e.preventDefault()
@@ -115,11 +116,11 @@ const GroupManagement: React.FC<GroupManagementProps> = ({
           </span>
         </div>
         
-        {/* Group Full - Ready for Approval */}
-        {group.Status === 'pending' && !group.IsApproved && isCreator && isGroupFull && (
+        {/* Group Ready - Has minimum members for approval */}
+        {group.Status === 'pending' && !group.IsApproved && isCreator && hasMinimumMembers && (
           <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
             <p className="text-green-800 mb-3">
-              🎉 Your group is now full! You can approve it to allow admin nominations and activation.
+              ✅ Your group has {approvedMembers.length} members and meets the minimum requirement! You can now approve it for activation.
             </p>
             <button
               onClick={() => setShowApproveModal(true)}
@@ -152,7 +153,8 @@ const GroupManagement: React.FC<GroupManagementProps> = ({
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
               <span className="text-gray-600">Members:</span>
-              <span className="ml-2 font-medium">{approvedMembers.length}/{group.MaxMembers || 10}</span>
+              <span className="ml-2 font-medium">{approvedMembers.length}/{group.MaxMembers || 20}</span>
+              <span className="text-xs text-gray-500 block">Min: {group.MinMembers || 3}</span>
             </div>
             <div>
               <span className="text-gray-600">Approved:</span>
