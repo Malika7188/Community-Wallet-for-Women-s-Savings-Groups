@@ -1,9 +1,9 @@
 package handlers
 
 import (
+	"chama-wallet-backend/utils"
 	"fmt"
 	"time"
-	"chama-wallet-backend/utils"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -39,7 +39,11 @@ func CreateGroup(c *fiber.Ctx) error {
 
 	// ✅ Step 1: Deploy contract using CLI (or pre-deployed if needed)
 	// For now, use a placeholder contract ID or generate one
-	contractID := "CADHKUC557DJ2F2XGEO4BGHFIYQ6O5QDVNG637ANRAGPBSWXMXXPMOI4"
+	// contractID := "CADHKUC557DJ2F2XGEO4BGHFIYQ6O5QDVNG637ANRAGPBSWXMXXPMOI4"
+	contractID, err := services.DeployChamaContract()
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to deploy contract"})
+	}
 
 	// ✅ Step 2: Save group in DB with the new contractID
 	group := models.Group{
