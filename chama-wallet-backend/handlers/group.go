@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -69,7 +70,7 @@ func CreateGroup(c *fiber.Ctx) error {
 		Status:   "approved",
 		JoinedAt: time.Now(),
 	}
-	
+
 	err = database.DB.Create(&member).Error
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to add creator as member"})
@@ -175,10 +176,10 @@ func GetGroupBalance(c *fiber.Ctx) error {
 func GetAllGroups(c *fiber.Ctx) error {
 	// Get authenticated user (optional)
 	user := c.Locals("user")
-	
+
 	var groups []models.Group
 	var err error
-	
+
 	if user != nil {
 		// If user is authenticated, only show groups they are part of
 		userModel := user.(models.User)
@@ -187,7 +188,7 @@ func GetAllGroups(c *fiber.Ctx) error {
 		// If not authenticated, show no groups
 		groups = []models.Group{}
 	}
-	
+
 	if err != nil {
 		fmt.Printf("❌ Error fetching groups: %v\n", err) // Add debug log
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
