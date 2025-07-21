@@ -21,6 +21,8 @@ export interface Group {
   PayoutOrder?: string
   CurrentRound?: number
   MaxMembers?: number
+  NextContributionDate?: string
+  IsApproved?: boolean
   CreatedAt: string
   UpdatedAt: string
 }
@@ -110,7 +112,7 @@ export interface InviteUserRequest {
 export interface ActivateGroupRequest {
   contribution_amount: number
   contribution_period: number
-  payout_order: string
+  payout_order: string[]
 }
 
 export interface PayoutRequest {

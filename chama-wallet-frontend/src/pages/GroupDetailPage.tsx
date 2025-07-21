@@ -151,12 +151,7 @@ const GroupDetailPage = () => {
         )}
 
         {activeTab === 'management' && user && (
-          <GroupManagement 
-            group={group} 
-            currentUser={user}
-            onInviteUser={() => {}} // Implement these handlers
-            onActivateGroup={() => {}}
-          />
+          <GroupManagement group={group} currentUser={user} />
         )}
 
         {activeTab === 'nominations' && user && (

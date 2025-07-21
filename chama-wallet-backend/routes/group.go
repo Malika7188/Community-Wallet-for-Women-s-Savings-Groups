@@ -14,7 +14,7 @@ func GroupRoutes(app *fiber.App) {
 	})
 
 	// Public routes (can be accessed without authentication)
-	app.Get("/groups", middleware.OptionalAuthMiddleware(), handlers.GetAllGroups)
+	app.Get("/groups", middleware.AuthMiddleware(), handlers.GetAllGroups)
 	app.Get("/group/:id", middleware.OptionalAuthMiddleware(), handlers.GetGroupDetails)
 	app.Get("/group/:id/balance", middleware.OptionalAuthMiddleware(), handlers.GetGroupBalance)
 
@@ -27,6 +27,7 @@ func GroupRoutes(app *fiber.App) {
 	// New routes
 	app.Post("/group/:id/invite", middleware.AuthMiddleware(), handlers.InviteToGroup)
 	app.Get("/group/:id/non-members", middleware.AuthMiddleware(), handlers.GetNonGroupMembers)
+	app.Post("/group/:id/approve", middleware.AuthMiddleware(), handlers.ApproveGroup)
 	app.Post("/group/:id/activate", middleware.AuthMiddleware(), handlers.ActivateGroup)
 	app.Post("/group/:id/nominate-admin", middleware.AuthMiddleware(), handlers.NominateAdmin)
 	app.Post("/group/:id/approve-member", middleware.AuthMiddleware(), handlers.ApproveMember)

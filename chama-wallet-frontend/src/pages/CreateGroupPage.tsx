@@ -96,9 +96,11 @@ const CreateGroupPage = () => {
             <h3 className="font-medium text-blue-900 mb-2">What happens next?</h3>
             <ul className="text-sm text-blue-800 space-y-1">
               <li>• A unique Stellar wallet will be created for your group</li>
-              <li>• You'll become the group administrator</li>
+              <li>• You'll automatically become the group creator</li>
               <li>• You can invite members to join your group</li>
-              <li>• Members can start making contributions immediately</li>
+              <li>• Once the group is full, you can approve it</li>
+              <li>• After approval, members can nominate admins</li>
+              <li>• Admins can then activate the group for contributions</li>
             </ul>
           </div>
 

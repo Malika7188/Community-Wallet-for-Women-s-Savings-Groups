@@ -132,5 +132,25 @@ func ApproveMember(c *fiber.Ctx) error {
 
     services.CreateNotification(member.UserID, groupID, notificationType, title, message)
 
+	// Check if group is now full and can be approved
+	if status == "approved" {
+		var group models.Group
+		database.DB.First(&group, "id = ?", groupID)
+		
+		var approvedMemberCount int64
+		database.DB.Model(&models.Member{}).Where("group_id = ? AND status = ?", groupID, "approved").Count(&approvedMemberCount)
+		
+		if approvedMemberCount >= int64(group.MaxMembers) && !group.IsApproved {
+			// Notify creator that group is full and can be approved
+			services.CreateNotification(
+				group.CreatorID,
+				groupID,
+				"group_full",
+				"Group is Full",
+				"Your group is now full and ready to be approved for activation",
+			)
+		}
+	}
+
     return c.JSON(fiber.Map{"message": "Member status updated successfully"})
 }

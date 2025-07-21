@@ -20,7 +20,6 @@ func CreateGroup(c *fiber.Ctx) error {
 	var payload struct {
 		Name        string `json:"name"`
 		Description string `json:"description"`
-		Wallet      string `json:"wallet"`
 	}
 
 	if err := c.BodyParser(&payload); err != nil {
@@ -29,6 +28,12 @@ func CreateGroup(c *fiber.Ctx) error {
 
 	// Get authenticated user
 	user := c.Locals("user").(models.User)
+
+	// Generate wallet for the group
+	wallet, err := services.GenerateStellarWallet()
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to generate wallet"})
+	}
 
 	// ✅ Step 1: Deploy contract using CLI (or pre-deployed if needed)
 	contractID, err := services.DeployChamaContract()
@@ -41,9 +46,10 @@ func CreateGroup(c *fiber.Ctx) error {
 		ID:          uuid.NewString(),
 		Name:        payload.Name,
 		Description: payload.Description,
-		Wallet:      payload.Wallet,
+		Wallet:      wallet.PublicKey,
 		CreatorID:   user.ID,
 		ContractID:  contractID,
+		Status:      "pending",
 	}
 
 	if err := database.DB.Create(&group).Error; err != nil {
@@ -53,11 +59,20 @@ func CreateGroup(c *fiber.Ctx) error {
 
 	fmt.Printf("✅ Group created successfully: %+v\n", group) // Add debug log
 
-	// Add the creator as the first member
-	_, err = services.AddMemberToGroup(group.ID, user.ID, user.Wallet)
+	// Add the creator as the first member with creator role and approved status
+	member := models.Member{
+		ID:       uuid.NewString(),
+		GroupID:  group.ID,
+		UserID:   user.ID,
+		Wallet:   user.Wallet,
+		Role:     "creator",
+		Status:   "approved",
+		JoinedAt: time.Now(),
+	}
+	
+	err = database.DB.Create(&member).Error
 	if err != nil {
-		// If adding the member fails, we might want to log it but not fail the whole group creation
-		fmt.Println("Warning: failed to add creator as member to new group:", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to add creator as member"})
 	}
 
 	return c.JSON(fiber.Map{
@@ -158,7 +173,21 @@ func GetGroupBalance(c *fiber.Ctx) error {
 	})
 }
 func GetAllGroups(c *fiber.Ctx) error {
-	groups, err := services.GetAllGroups()
+	// Get authenticated user (optional)
+	user := c.Locals("user")
+	
+	var groups []models.Group
+	var err error
+	
+	if user != nil {
+		// If user is authenticated, only show groups they are part of
+		userModel := user.(models.User)
+		groups, err = services.GetUserGroups(userModel.ID)
+	} else {
+		// If not authenticated, show no groups
+		groups = []models.Group{}
+	}
+	
 	if err != nil {
 		fmt.Printf("❌ Error fetching groups: %v\n", err) // Add debug log
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{

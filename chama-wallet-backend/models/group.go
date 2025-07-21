@@ -18,6 +18,8 @@ type Group struct {
 	PayoutOrder       string     `gorm:"column:payout_order"` // JSON array of member IDs
 	CurrentRound      int        `gorm:"column:current_round;default:0"`
 	MaxMembers        int        `gorm:"column:max_members;default:10"`
+	NextContributionDate time.Time `gorm:"column:next_contribution_date"`
+	IsApproved        bool       `gorm:"column:is_approved;default:false"`
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
 }

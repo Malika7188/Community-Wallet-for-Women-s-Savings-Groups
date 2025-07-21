@@ -81,6 +81,7 @@ export const groupApi = {
   contributeToGroup: (id: string, data: ContributeRequest) => api.post(`/group/${id}/contribute`, data),
   inviteToGroup: (id: string, data: InviteUserRequest) => api.post(`/group/${id}/invite`, data),
   getNonGroupMembers: (id: string) => api.get<User[]>(`/group/${id}/non-members`),
+  approveGroup: (id: string) => api.post(`/group/${id}/approve`),
   activateGroup: (id: string, data: ActivateGroupRequest) => api.post(`/group/${id}/activate`, data),
   nominateAdmin: (id: string, data: { nominee_id: string }) => api.post(`/group/${id}/nominate-admin`, data),
   approveMember: (id: string, data: { member_id: string, action: string }) => api.post(`/group/${id}/approve-member`, data),
