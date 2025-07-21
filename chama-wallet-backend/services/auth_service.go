@@ -2,6 +2,7 @@ package services
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -77,13 +78,17 @@ func RegisterUser(req models.RegisterRequest) (models.AuthResponse, error) {
 	// Hash password
 	hashedPassword, err := HashPassword(req.Password)
 	if err != nil {
-		return models.AuthResponse{}, err
+		return models.AuthResponse{}, fmt.Errorf("failed to hash password: %w", err)
 	}
 
 	// Generate wallet for user
 	wallet, err := utils.GenerateStellarWallet()
 	if err != nil {
-		return models.AuthResponse{}, err
+		return models.AuthResponse{}, fmt.Errorf("failed to generate wallet: %w", err)
+	}
+
+	if wallet.PublicKey == "" {
+		return models.AuthResponse{}, errors.New("generated wallet has empty public key")
 	}
 
 	// Create user
@@ -96,13 +101,13 @@ func RegisterUser(req models.RegisterRequest) (models.AuthResponse, error) {
 	}
 
 	if err := database.DB.Create(&user).Error; err != nil {
-		return models.AuthResponse{}, err
+		return models.AuthResponse{}, fmt.Errorf("failed to create user: %w", err)
 	}
 
 	// Generate JWT token
 	token, err := GenerateJWT(user.ID, user.Email)
 	if err != nil {
-		return models.AuthResponse{}, err
+		return models.AuthResponse{}, fmt.Errorf("failed to generate token: %w", err)
 	}
 
 	return models.AuthResponse{
