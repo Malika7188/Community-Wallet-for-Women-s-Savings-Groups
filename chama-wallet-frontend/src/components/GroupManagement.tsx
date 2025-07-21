@@ -1,7 +1,5 @@
-import React, { useState } from 'react'
-import { Users, Settings, UserPlus, CheckCircle } from 'lucide-react'
 import React, { useState, useEffect } from 'react'
-import { Users, Settings, UserPlus, CheckCircle } from 'lucide-react'
+import { Settings, UserPlus, CheckCircle } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { groupApi } from '../services/api'
 import toast from 'react-hot-toast'
