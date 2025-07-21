@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Bell, Check, X, Users, DollarSign, UserPlus } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { api } from '../services/api'
+import api, { notificationApi } from '../services/api'
 import type { Notification, GroupInvitation } from '../types'
 import toast from 'react-hot-toast'
 
@@ -11,32 +11,50 @@ const NotificationCenter = () => {
 
   const { data: notifications = [] } = useQuery({
     queryKey: ['notifications'],
-    queryFn: () => api.get<Notification[]>('/notifications').then(res => res.data)
+    queryFn: () => {
+      console.log('🔍 Fetching notifications...')
+      return notificationApi.getNotifications().then((res: { data: Notification[] }) => {
+        console.log('✅ Notifications received:', res.data)
+        return res.data
+      })
+    },
+    refetchInterval: 30000, // Refetch every 30 seconds
   })
 
   const { data: invitations = [] } = useQuery({
     queryKey: ['invitations'],
-    queryFn: () => api.get<GroupInvitation[]>('/invitations').then(res => res.data)
+    queryFn: () => {
+      console.log('🔍 Fetching invitations...')
+      return notificationApi.getInvitations().then((res: { data: GroupInvitation[] }) => {
+        console.log('✅ Invitations received:', res.data)
+        return res.data
+      })
+    },
+    refetchInterval: 30000, // Refetch every 30 seconds
   })
 
   const markAsReadMutation = useMutation({
-    mutationFn: (id: string) => api.put(`/notifications/${id}/read`),
+    mutationFn: (id: string) => notificationApi.markAsRead(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] })
     }
   })
 
   const acceptInvitationMutation = useMutation({
-    mutationFn: (id: string) => api.post(`/invitations/${id}/accept`),
+    mutationFn: (id: string) => notificationApi.acceptInvitation(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invitations'] })
       queryClient.invalidateQueries({ queryKey: ['groups'] })
-      toast.success('Invitation accepted!')
+      queryClient.invalidateQueries({ queryKey: ['userGroups'] }) // Add this if you have user-specific groups
+      toast.success('Invitation accepted! You are now a member of the group.')
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || 'Failed to accept invitation')
     }
   })
 
   const rejectInvitationMutation = useMutation({
-    mutationFn: (id: string) => api.post(`/invitations/${id}/reject`),
+    mutationFn: (id: string) => notificationApi.rejectInvitation(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invitations'] })
       toast.success('Invitation rejected')

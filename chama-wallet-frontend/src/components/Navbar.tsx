@@ -2,6 +2,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { Wallet, Users, BarChart3, LogOut, Menu, X } from 'lucide-react'
 import { useState } from 'react'
+import NotificationCenter from './NotificationCenter'
 
 const Navbar = () => {
   const { user, logout } = useAuth()
@@ -60,6 +61,7 @@ const Navbar = () => {
               <>
                 <div className="hidden md:flex items-center space-x-3">
                   <span className="text-sm text-gray-700">Welcome, {user.name}</span>
+                  <NotificationCenter />
                   <button
                     onClick={handleLogout}
                     className="flex items-center space-x-1 text-gray-600 hover:text-gray-900 transition-colors"
