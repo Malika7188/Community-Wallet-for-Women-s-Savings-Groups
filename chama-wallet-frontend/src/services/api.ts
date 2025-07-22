@@ -11,7 +11,8 @@ import type {
   ActivateGroupRequest,
   User,
   Notification,
-  GroupInvitation
+  GroupInvitation,
+  RoundStatusResponse
 } from '../types'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'
@@ -88,6 +89,12 @@ export const groupApi = {
   createPayoutRequest: (id: string, data: any) => api.post(`/group/${id}/payout-request`, data),
   getPayoutRequests: (id: string) => api.get(`/group/${id}/payout-requests`),
   getPayoutSchedule: (id: string) => api.get(`/group/${id}/payout-schedule`),
+  contributeToRound: (id: string, data: { round: number, amount: number, secret: string }) => 
+    api.post(`/group/${id}/contribute-round`, data),
+  getRoundStatus: (id: string, round: number) => 
+    api.get<RoundStatusResponse>(`/group/${id}/round-status?round=${round}`),
+  authorizeRoundPayout: (id: string, data: { round: number }) => 
+    api.post(`/group/${id}/authorize-payout`, data),
 }
 
 export const payoutApi = {

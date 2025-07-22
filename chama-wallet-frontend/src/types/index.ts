@@ -152,3 +152,44 @@ export interface PayoutSchedule {
   CreatedAt: string
   UpdatedAt: string
 }
+
+export interface RoundContribution {
+  ID: string
+  GroupID: string
+  MemberID: string
+  Member: Member
+  Round: number
+  Amount: number
+  Status: 'pending' | 'confirmed' | 'failed'
+  TxHash: string
+  CreatedAt: string
+  UpdatedAt: string
+}
+
+export interface RoundStatus {
+  ID: string
+  GroupID: string
+  Round: number
+  TotalRequired: number
+  TotalReceived: number
+  ContributorsCount: number
+  RequiredCount: number
+  Status: 'collecting' | 'ready_for_payout' | 'completed'
+  PayoutAuthorized: boolean
+  CreatedAt: string
+  UpdatedAt: string
+}
+
+export interface MemberContributionStatus {
+  member: Member
+  has_paid: boolean
+  contribution?: RoundContribution
+}
+
+export interface RoundStatusResponse {
+  round: number
+  round_status: RoundStatus
+  member_status: MemberContributionStatus[]
+  total_members: number
+  paid_members: number
+}

@@ -4,6 +4,7 @@ import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
 import { groupApi } from '../services/api'
 import toast from 'react-hot-toast'
 import type { Group, User } from '../types'
+import RoundContributions from './RoundContributions'
 
 interface GroupManagementProps {
   group: Group
@@ -390,6 +391,13 @@ const GroupManagement: React.FC<GroupManagementProps> = ({
               </ul>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Round Contributions Section */}
+      {group.Status === 'active' && (
+        <div className="mt-8">
+          <RoundContributions group={group} currentUser={currentUser} />
         </div>
       )}
 
