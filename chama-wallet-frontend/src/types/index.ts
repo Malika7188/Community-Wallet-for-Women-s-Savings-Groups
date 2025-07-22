@@ -3,6 +3,7 @@ export interface User {
   email: string
   name: string
   wallet: string
+  secret_key?: string
   createdAt: string
 }
 
@@ -11,6 +12,7 @@ export interface Group {
   Name: string
   Description: string
   Wallet: string
+  SecretKey?: string
   CreatorID: string
   Creator: User
   Members?: Member[]

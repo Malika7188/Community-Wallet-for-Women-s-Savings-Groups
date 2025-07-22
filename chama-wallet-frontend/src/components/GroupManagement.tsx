@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Settings, UserPlus, CheckCircle } from 'lucide-react'
+import { Settings, UserPlus, CheckCircle, Copy } from 'lucide-react'
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
 import { groupApi } from '../services/api'
 import toast from 'react-hot-toast'
@@ -209,6 +209,51 @@ const GroupManagement: React.FC<GroupManagementProps> = ({
               <span className="ml-2 font-medium">{group.IsApproved ? 'Yes' : 'No'}</span>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Group Wallet Info */}
+      <div className="card">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Group Wallet</h3>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Group Wallet Address
+            </label>
+            <div className="flex items-center space-x-2">
+              <code className="flex-1 text-xs bg-gray-100 p-2 rounded font-mono break-all">
+                {group.Wallet}
+              </code>
+              <button
+                onClick={() => navigator.clipboard.writeText(group.Wallet)}
+                className="p-2 text-gray-400 hover:text-gray-600"
+              >
+                <Copy className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+          
+          {isAdmin && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <label className="block text-sm font-medium text-red-700 mb-1">
+                Group Secret Key (Admin Only)
+              </label>
+              <div className="flex items-center space-x-2 mb-2">
+                <code className="flex-1 text-xs bg-gray-100 p-2 rounded font-mono break-all">
+                  {group.SecretKey || 'Not available'}
+                </code>
+                <button
+                  onClick={() => navigator.clipboard.writeText(group.SecretKey || '')}
+                  className="p-2 text-gray-400 hover:text-gray-600"
+                >
+                  <Copy className="w-4 h-4" />
+                </button>
+              </div>
+              <p className="text-sm text-red-700">
+                ⚠️ This key controls the group wallet. Keep it secure!
+              </p>
+            </div>
+          )}
         </div>
       </div>
 

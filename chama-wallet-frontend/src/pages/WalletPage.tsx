@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+
 import { useBalance, useWallet } from '../hooks/useWallet'
 import { 
   Wallet, 
@@ -133,6 +134,27 @@ const WalletPage = () => {
               >
                 <ExternalLink className="w-5 h-5" />
               </a>
+            </div>
+          </div>
+
+          {/* User Secret Key */}
+          <div className="card">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Your Secret Key</h3>
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <div className="flex items-center space-x-2 mb-3">
+                <code className="flex-1 text-xs bg-gray-100 p-2 rounded font-mono break-all">
+                  {user?.secret_key || 'Not available'}
+                </code>
+                <button
+                  onClick={() => copyToClipboard(user?.secret_key || '')}
+                  className="p-2 text-gray-400 hover:text-gray-600"
+                >
+                  <Copy className="w-4 h-4" />
+                </button>
+              </div>
+              <p className="text-sm text-yellow-700">
+                ⚠️ Keep this secret key safe. You need it to make transactions.
+              </p>
             </div>
           </div>
 

@@ -10,6 +10,7 @@ type User struct {
 	Name      string    `gorm:"not null" json:"name"`
 	Password  string    `gorm:"not null" json:"-"` // Don't include in JSON responses
 	Wallet    string    `json:"wallet"`
+	SecretKey string    `json:"secret_key,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
