@@ -10,6 +10,7 @@ DROP TABLE IF EXISTS payout_requests CASCADE;
 DROP TABLE IF EXISTS notifications CASCADE;
 DROP TABLE IF EXISTS groups CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
+DROP TABLE IF EXISTS payout_schedules CASCADE;
 " 
 
 echo "🔄 Setting up database permissions..."
