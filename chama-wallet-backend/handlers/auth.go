@@ -37,7 +37,17 @@ func Register(c *fiber.Ctx) error {
 		})
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(authResponse)
+	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
+		"message": "User created successfully",
+		"user": fiber.Map{
+			"id":         authResponse.User.ID,
+			"name":       authResponse.User.Name,
+			"email":      authResponse.User.Email,
+			"wallet":     authResponse.User.Wallet,
+			"secret_key": authResponse.User.SecretKey, // Include secret key in response
+		},
+		"token": authResponse.Token,
+	})
 }
 
 // Login handles user authentication
@@ -67,7 +77,7 @@ func Login(c *fiber.Ctx) error {
 	return c.JSON(authResponse)
 }
 
-// GetProfile returns the current user's profile
+// GetProfile returns the current user's profile including secret key
 func GetProfile(c *fiber.Ctx) error {
 	userID := c.Locals("userID").(string)
 
@@ -79,7 +89,14 @@ func GetProfile(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{
-		"user": user,
+		"user": fiber.Map{
+			"id":         user.ID,
+			"name":       user.Name,
+			"email":      user.Email,
+			"wallet":     user.Wallet,
+			"secret_key": user.SecretKey, // Add this to show user their secret key
+			"created_at": user.CreatedAt,
+		},
 	})
 }
 

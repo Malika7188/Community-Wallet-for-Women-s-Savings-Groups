@@ -2,7 +2,6 @@ package services
 
 import (
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -69,45 +68,36 @@ func ValidateJWT(tokenString string) (*Claims, error) {
 
 // RegisterUser creates a new user account
 func RegisterUser(req models.RegisterRequest) (models.AuthResponse, error) {
-	// Check if user already exists
-	var existingUser models.User
-	if err := database.DB.Where("email = ?", req.Email).First(&existingUser).Error; err == nil {
-		return models.AuthResponse{}, errors.New("user with this email already exists")
+	// Generate wallet
+	wallet, err := utils.GenerateStellarWallet()
+	if err != nil {
+		return models.AuthResponse{}, err
 	}
 
 	// Hash password
-	hashedPassword, err := HashPassword(req.Password)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), 14)
 	if err != nil {
-		return models.AuthResponse{}, fmt.Errorf("failed to hash password: %w", err)
+		return models.AuthResponse{}, err
 	}
 
-	// Generate wallet for user
-	wallet, err := utils.GenerateStellarWallet()
-	if err != nil {
-		return models.AuthResponse{}, fmt.Errorf("failed to generate wallet: %w", err)
-	}
-
-	if wallet.PublicKey == "" {
-		return models.AuthResponse{}, errors.New("generated wallet has empty public key")
-	}
-
-	// Create user
+	// Create user with secret key
 	user := models.User{
-		ID:       uuid.New().String(),
-		Name:     req.Name,
-		Email:    req.Email,
-		Password: hashedPassword,
-		Wallet:   wallet.PublicKey,
+		ID:        uuid.New().String(),
+		Name:      req.Name,
+		Email:     req.Email,
+		Password:  string(hashedPassword),
+		Wallet:    wallet.PublicKey,
+		SecretKey: wallet.SecretKey, // Make sure this is set
 	}
 
 	if err := database.DB.Create(&user).Error; err != nil {
-		return models.AuthResponse{}, fmt.Errorf("failed to create user: %w", err)
+		return models.AuthResponse{}, err
 	}
 
-	// Generate JWT token
+	// Generate token
 	token, err := GenerateJWT(user.ID, user.Email)
 	if err != nil {
-		return models.AuthResponse{}, fmt.Errorf("failed to generate token: %w", err)
+		return models.AuthResponse{}, err
 	}
 
 	return models.AuthResponse{
@@ -153,6 +143,7 @@ func GetUserByID(userID string) (models.User, error) {
 func UpdateUser(user models.User) error {
 	return database.DB.Save(&user).Error
 }
+
 // GetUserByEmail retrieves a user by email
 func GetUserByEmail(email string) (models.User, error) {
 	var user models.User

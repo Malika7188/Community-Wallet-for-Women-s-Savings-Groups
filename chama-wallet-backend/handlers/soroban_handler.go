@@ -22,7 +22,8 @@ func ContributeHandler(c *fiber.Ctx) error {
 
 	args := []string{body.UserAddress, body.Amount}
 
-	result, err := services.CallSorobanFunction(contractID, "contribute", args)
+	// Use CallSorobanFunctionWithAuth instead
+	result, err := services.CallSorobanFunctionWithAuth(contractID, "contribute", body.UserAddress, args)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}

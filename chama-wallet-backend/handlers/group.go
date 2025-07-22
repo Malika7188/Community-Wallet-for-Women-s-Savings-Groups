@@ -40,14 +40,14 @@ func CreateGroup(c *fiber.Ctx) error {
 
 	fmt.Printf("✅ Generated group wallet: %s\n", wallet.PublicKey)
 
-	// Fund the group wallet on testnet
-	err = services.FundTestAccount(wallet.PublicKey)
-	if err != nil {
-		fmt.Printf("⚠️ Warning: Failed to fund group wallet: %v\n", err)
-		// Don't fail the group creation, just log the warning
-	} else {
-		fmt.Printf("✅ Group wallet funded successfully\n")
-	}
+	// Remove the funding section - comment out or delete these lines:
+	// err = services.FundTestAccount(wallet.PublicKey)
+	// if err != nil {
+	//     fmt.Printf("⚠️ Warning: Failed to fund group wallet: %v\n", err)
+	//     // Don't fail the group creation, just log the warning
+	// } else {
+	//     fmt.Printf("✅ Group wallet funded successfully\n")
+	// }
 
 	// Deploy contract
 	contractID, err := services.DeployChamaContract()
@@ -65,14 +65,12 @@ func CreateGroup(c *fiber.Ctx) error {
 		CreatorID:   user.ID,
 		ContractID:  contractID,
 		Status:      "pending",
+		SecretKey:   wallet.SecretKey, // Add this field to store secret
 	}
 
 	if err := database.DB.Create(&group).Error; err != nil {
-		fmt.Printf("❌ Failed to create group: %v\n", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to save group"})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
-
-	fmt.Printf("✅ Group created successfully: %+v\n", group)
 
 	// Add the creator as the first member with creator role and approved status
 	member := models.Member{
@@ -91,10 +89,17 @@ func CreateGroup(c *fiber.Ctx) error {
 		// Don't fail the group creation
 	}
 
-	return c.JSON(fiber.Map{
-		"message":     "Group created",
-		"group":       group,
-		"contract_id": contractID,
+	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
+		"message": "Group created successfully",
+		"group": fiber.Map{
+			"id":          group.ID,
+			"name":        group.Name,
+			"description": group.Description,
+			"wallet":      group.Wallet,
+			"secret_key":  group.SecretKey,
+			"status":      group.Status,
+			"contract_id": contractID,
+		},
 	})
 }
 
@@ -224,4 +229,33 @@ func GetGroupDetails(c *fiber.Ctx) error {
 		})
 	}
 	return c.JSON(group)
+}
+
+// GetGroupSecretKey returns the group's secret key (only for creators/admins)
+func GetGroupSecretKey(c *fiber.Ctx) error {
+	groupID := c.Params("id")
+	user := c.Locals("user").(models.User)
+
+	// Check if user is admin/creator of the group
+	var member models.Member
+	if err := database.DB.Where("group_id = ? AND user_id = ? AND role IN ?", 
+		groupID, user.ID, []string{"creator", "admin"}).First(&member).Error; err != nil {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"error": "Only group creators and admins can view the secret key",
+		})
+	}
+
+	// Get group
+	group, err := services.GetGroupByID(groupID)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": "Group not found",
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"group_id":   group.ID,
+		"wallet":     group.Wallet,
+		"secret_key": group.SecretKey,
+	})
 }
