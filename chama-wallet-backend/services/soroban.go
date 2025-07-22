@@ -3,27 +3,23 @@ package services
 
 import (
 	"fmt"
-	"os"
 	"os/exec"
 	"strings"
-
-	"github.com/stellar/go/clients/horizonclient"
-	"github.com/stellar/go/network"
 )
 
-const (
-	sorobanRPC = "https://soroban-testnet.stellar.org"
-	// contractID = "CADHKUC557DJ2F2XGEO4BGHFIYQ6O5QDVNG637ANRAGPBSWXMXXPMOI4"
-)
+// var (
+// sorobanRPC = "https://soroban-testnet.stellar.org"
+// contractID = "CADHKUC557DJ2F2XGEO4BGHFIYQ6O5QDVNG637ANRAGPBSWXMXXPMOI4"
+// )
 
-var (
-	rpcURL            = "https://soroban-testnet.stellar.org:443"
-	contractID        = "CADHKUC557DJ2F2XGEO4BGHFIYQ6O5QDVNG637ANRAGPBSWXMXXPMOI4" // Your contract
-	networkPassphrase = network.TestNetworkPassphrase
-	signerSecret      = os.Getenv("SIGNER_SECRET") // Or hardcode temporarily
-	// sorobanClient     = sorobanrpc.NewClient("https://soroban-testnet.stellar.org:443")
-	client = horizonclient.DefaultTestNetClient
-)
+// var (
+// 	rpcURL            = "https://soroban-testnet.stellar.org:443"
+// 	contractID        = "CADHKUC557DJ2F2XGEO4BGHFIYQ6O5QDVNG637ANRAGPBSWXMXXPMOI4" // Your contract
+// 	networkPassphrase = network.TestNetworkPassphrase
+// 	signerSecret      = os.Getenv("SIGNER_SECRET") // Or hardcode temporarily
+// sorobanClient     = sorobanrpc.NewClient("https://soroban-testnet.stellar.org:443")
+// client = horizonclient.DefaultTestNetClient
+// )
 
 type SorobanInvokeRequest struct {
 	ContractID string        `json:"contract_id"`
