@@ -69,6 +69,12 @@ func ValidateJWT(tokenString string) (*Claims, error) {
 // RegisterUser creates a new user account
 func RegisterUser(req models.RegisterRequest) (models.AuthResponse, error) {
 	// Generate wallet
+	// Check if user already exists
+	var existingUser models.User
+	if err := database.DB.Where("email = ?", req.Email).First(&existingUser).Error; err == nil {
+		return models.AuthResponse{}, errors.New("user with this email already exists")
+	}
+	
 	wallet, err := utils.GenerateStellarWallet()
 	if err != nil {
 		return models.AuthResponse{}, err
