@@ -19,6 +19,8 @@ func RunMigrations() {
         &models.PayoutApproval{},
         &models.PayoutSchedule{},
         &models.Notification{},
+        &models.RoundContribution{},
+        &models.RoundStatus{},
     )
     
     if err != nil {
