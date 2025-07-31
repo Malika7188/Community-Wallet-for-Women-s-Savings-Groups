@@ -1,8 +1,9 @@
-import { useState } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
-import { useAuth } from '../contexts/AuthContext'
-import { Eye, EyeOff, Wallet } from 'lucide-react'
-import toast from 'react-hot-toast'
+import { useState } from 'react';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { Eye, EyeOff } from 'lucide-react';
+import { WalletIcon } from '@heroicons/react/24/outline';
+import toast from 'react-hot-toast';
 
 const LoginPage = () => {
   const { user, login, isLoading } = useAuth()
@@ -36,106 +37,71 @@ const LoginPage = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div className="text-center">
-          <div className="w-16 h-16 bg-gradient-to-r from-stellar-500 to-primary-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Wallet className="w-8 h-8 text-white" />
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#e0e7ef] to-[#f5f6fa] font-inter">
+      <div className="w-full max-w-xl">
+        <div className="rounded-3xl shadow-2xl bg-white/80 backdrop-blur-lg border border-gray-100 px-16 py-16 flex flex-col items-center animate-fade-in">
+          <div className="w-15 h-0 bg-gradient-to-br from-[#1a237e] to-[#2ecc71] rounded-3xl flex items-center justify-center mb-6 shadow-xl">
+            <WalletIcon className="w-10 h-10 text-white" />
           </div>
-          <h2 className="text-3xl font-bold text-gray-900">
+          <h2 className="text-5xl font-black text-[#1a237e] tracking-tight mb-2" style={{ fontFamily: 'Inter, Roboto, sans-serif' }}>
             Welcome back
           </h2>
-          <p className="mt-2 text-gray-600">
-            Sign in to your Chama Wallet account
-          </p>
-        </div>
-
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="space-y-4">
+          <p className="mb-8 text-gray-600 font-semibold text-xl">Sign in to your Chama Wallet account</p>
+          <form className="w-full space-y-7" onSubmit={handleSubmit}>
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                Email address
-              </label>
+              <label htmlFor="email" className="block text-lg font-bold text-[#1a237e] mb-2">Email address</label>
               <input
                 id="email"
                 name="email"
                 type="email"
                 required
-                className="input"
+                className="w-full rounded-2xl border border-gray-200 px-6 py-4 text-lg focus:ring-2 focus:ring-[#2ecc71] focus:outline-none bg-white/90 font-inter"
                 placeholder="Enter your email"
                 value={formData.email}
                 onChange={handleChange}
               />
             </div>
-
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                Password
-              </label>
+              <label htmlFor="password" className="block text-lg font-bold text-[#1a237e] mb-2">Password</label>
               <div className="relative">
                 <input
                   id="password"
                   name="password"
                   type={showPassword ? 'text' : 'password'}
                   required
-                  className="input pr-10"
+                  className="w-full rounded-2xl border border-gray-200 px-6 py-4 text-lg pr-12 focus:ring-2 focus:ring-[#2ecc71] focus:outline-none bg-white/90 font-inter"
                   placeholder="Enter your password"
                   value={formData.password}
                   onChange={handleChange}
                 />
                 <button
                   type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  className="absolute inset-y-0 right-0 pr-4 flex items-center"
                   onClick={() => setShowPassword(!showPassword)}
                 >
                   {showPassword ? (
-                    <EyeOff className="h-5 w-5 text-gray-400" />
+                    <EyeOff className="h-6 w-6 text-gray-400" />
                   ) : (
-                    <Eye className="h-5 w-5 text-gray-400" />
+                    <Eye className="h-6 w-6 text-gray-400" />
                   )}
                 </button>
               </div>
             </div>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <input
-                id="remember-me"
-                name="remember-me"
-                type="checkbox"
-                className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-              />
-              <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
-                Remember me
-              </label>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full py-4 rounded-2xl bg-[#2ecc71] text-white font-extrabold text-2xl shadow-lg hover:bg-[#27ae60] transition-colors duration-200 font-inter"
+            >
+              {isLoading ? 'Signing in...' : 'Sign in'}
+            </button>
+            <div className="text-center mt-4">
+              <span className="text-gray-600 text-lg">Don't have an account? </span>
+              <Link to="/signup" className="font-bold text-[#1a237e] hover:text-[#2ecc71] transition-colors text-lg">Sign up</Link>
             </div>
-
-            <div className="text-sm">
-              <a href="#" className="font-medium text-primary-600 hover:text-primary-500">
-                Forgot your password?
-              </a>
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="btn btn-primary w-full"
-          >
-            {isLoading ? 'Signing in...' : 'Sign in'}
-          </button>
-
-          <div className="text-center">
-            <span className="text-gray-600">Don't have an account? </span>
-            <Link to="/signup" className="font-medium text-primary-600 hover:text-primary-500">
-              Sign up
-            </Link>
-          </div>
-        </form>
+          </form>
+        </div>
       </div>
     </div>
   )
 }
-
 export default LoginPage
