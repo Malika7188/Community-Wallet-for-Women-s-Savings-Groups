@@ -71,58 +71,55 @@ const WalletPage = () => {
   const walletBalance = balance?.data?.balances?.[0]?.split(': ')[1] || '0 XLM'
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">My Wallet</h1>
-        <p className="text-gray-600 mt-2">
-          Manage your Stellar wallet and transactions
-        </p>
+    <div className="max-w-5xl mx-auto px-2 sm:px-6 lg:px-8 py-10">
+      <div className="mb-10">
+        <h1 className="text-4xl font-black text-[#1a237e] tracking-tight mb-1" style={{ fontFamily: 'Inter, Roboto, sans-serif' }}>My Wallet</h1>
+        <p className="text-gray-600 text-lg font-medium">Manage your Stellar wallet and transactions</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
         {/* Wallet Overview */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-8">
           {/* Balance Card */}
-          <div className="card">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-gray-900">Wallet Balance</h2>
+          <div className="relative rounded-3xl p-10 bg-white/80 backdrop-blur-lg shadow-2xl border border-gray-100 flex flex-col items-center overflow-hidden min-h-[260px]">
+            <div className="absolute inset-0 pointer-events-none opacity-40" style={{background: 'linear-gradient(135deg, #e0f7fa 0%, #e8f5e9 100%)'}} />
+            <div className="relative flex w-full items-center justify-between mb-6 z-10">
+              <h2 className="text-2xl font-extrabold text-[#1a237e]">Wallet Balance</h2>
               <button
                 onClick={() => refetch()}
-                className="p-2 text-gray-400 hover:text-gray-600"
+                className="p-2 text-[#2ecc71] hover:text-[#1a237e] bg-white/70 rounded-full shadow"
                 disabled={balanceLoading}
               >
-                <RefreshCw className={`w-5 h-5 ${balanceLoading ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`w-6 h-6 ${balanceLoading ? 'animate-spin' : ''}`} />
               </button>
             </div>
-            
-            <div className="text-center py-8">
-              <div className="w-20 h-20 bg-gradient-to-r from-stellar-500 to-primary-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Wallet className="w-10 h-10 text-white" />
+            <div className="relative text-center py-6 z-10">
+              <div className="w-24 h-24 bg-gradient-to-br from-[#1a237e] to-[#2ecc71] rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                <Wallet className="w-12 h-12 text-white" />
               </div>
-              
               {balanceLoading ? (
                 <LoadingSpinner />
               ) : (
                 <>
-                  <p className="text-4xl font-bold text-gray-900 mb-2">
+                  <p className="text-5xl font-black text-[#1a237e] mb-2" style={{ fontFamily: 'Inter, Roboto, sans-serif' }}>
                     {walletBalance}
                   </p>
-                  <p className="text-gray-600">Available Balance</p>
+                  <p className="text-gray-600 text-lg font-medium">Available Balance</p>
                 </>
               )}
             </div>
           </div>
 
           {/* Wallet Address */}
-          <div className="card">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Wallet Address</h3>
-            <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-lg">
-              <code className="flex-1 text-sm font-mono break-all">
+          <div className="rounded-2xl bg-white/90 border border-gray-100 shadow p-6 flex flex-col gap-2">
+            <h3 className="text-lg font-bold text-[#1a237e] mb-2">Wallet Address</h3>
+            <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-xl">
+              <code className="flex-1 text-base font-mono break-all text-[#1a237e]">
                 {user?.wallet}
               </code>
               <button
                 onClick={() => copyToClipboard(user?.wallet || '')}
-                className="p-2 text-gray-400 hover:text-gray-600"
+                className="p-2 text-[#2ecc71] hover:text-[#1a237e]"
               >
                 <Copy className="w-5 h-5" />
               </button>
@@ -130,7 +127,7 @@ const WalletPage = () => {
                 href={`https://stellar.expert/explorer/testnet/account/${user?.wallet}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="p-2 text-gray-400 hover:text-gray-600"
+                className="p-2 text-[#2ecc71] hover:text-[#1a237e]"
               >
                 <ExternalLink className="w-5 h-5" />
               </a>
@@ -138,51 +135,49 @@ const WalletPage = () => {
           </div>
 
           {/* User Secret Key */}
-          <div className="card">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Your Secret Key</h3>
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <div className="flex items-center space-x-2 mb-3">
-                <code className="flex-1 text-xs bg-gray-100 p-2 rounded font-mono break-all">
-                  {user?.secret_key || 'Not available'}
-                </code>
-                <button
-                  onClick={() => copyToClipboard(user?.secret_key || '')}
-                  className="p-2 text-gray-400 hover:text-gray-600"
-                >
-                  <Copy className="w-4 h-4" />
-                </button>
-              </div>
-              <p className="text-sm text-yellow-700">
-                ⚠️ Keep this secret key safe. You need it to make transactions.
-              </p>
+          <div className="rounded-2xl bg-yellow-50 border border-yellow-200 shadow p-6">
+            <h3 className="text-lg font-bold text-[#b58900] mb-2">Your Secret Key</h3>
+            <div className="flex items-center space-x-2 mb-3">
+              <code className="flex-1 text-xs bg-gray-100 p-2 rounded font-mono break-all text-[#b58900]">
+                {user?.secret_key || 'Not available'}
+              </code>
+              <button
+                onClick={() => copyToClipboard(user?.secret_key || '')}
+                className="p-2 text-[#b58900] hover:text-yellow-700"
+              >
+                <Copy className="w-4 h-4" />
+              </button>
             </div>
+            <p className="text-sm text-yellow-700">
+              ⚠️ Keep this secret key safe. You need it to make transactions.
+            </p>
           </div>
 
           {/* Quick Actions */}
-          <div className="card">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+          <div className="rounded-2xl bg-white/90 border border-gray-100 shadow p-6">
+            <h3 className="text-lg font-bold text-[#1a237e] mb-2">Quick Actions</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <button
                 onClick={() => setShowTransferModal(true)}
-                className="btn btn-primary"
+                className="inline-flex items-center justify-center px-6 py-4 rounded-xl bg-[#2ecc71] text-white font-bold text-lg shadow hover:bg-[#27ae60] transition-colors duration-200"
               >
-                <Send className="w-4 h-4 mr-2" />
+                <Send className="w-5 h-5 mr-2" />
                 Send XLM
               </button>
               <button
                 onClick={handleFundAccount}
                 disabled={fundAccount.isPending}
-                className="btn btn-outline"
+                className="inline-flex items-center justify-center px-6 py-4 rounded-xl border border-[#2ecc71] text-[#1a237e] font-bold text-lg shadow hover:bg-[#2ecc71]/10 transition-colors duration-200"
               >
-                <Plus className="w-4 h-4 mr-2" />
+                <Plus className="w-5 h-5 mr-2" />
                 {fundAccount.isPending ? 'Funding...' : 'Fund Account'}
               </button>
               <button
                 onClick={handleGenerateKeypair}
                 disabled={generateKeypair.isPending}
-                className="btn btn-outline"
+                className="inline-flex items-center justify-center px-6 py-4 rounded-xl border border-[#1a237e] text-[#1a237e] font-bold text-lg shadow hover:bg-[#1a237e]/10 transition-colors duration-200"
               >
-                <Wallet className="w-4 h-4 mr-2" />
+                <Wallet className="w-5 h-5 mr-2" />
                 {generateKeypair.isPending ? 'Generating...' : 'New Keypair'}
               </button>
             </div>
@@ -190,30 +185,30 @@ const WalletPage = () => {
         </div>
 
         {/* Sidebar */}
-        <div className="space-y-6">
+        <div className="space-y-8">
           {/* Wallet Info */}
-          <div className="card">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Wallet Info</h3>
-            <div className="space-y-3 text-sm">
+          <div className="rounded-2xl bg-white/90 border border-gray-100 shadow p-6">
+            <h3 className="text-lg font-bold text-[#1a237e] mb-2">Wallet Info</h3>
+            <div className="space-y-3 text-base">
               <div className="flex justify-between">
                 <span className="text-gray-600">Network:</span>
-                <span className="font-medium">Testnet</span>
+                <span className="font-bold">Testnet</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Asset:</span>
-                <span className="font-medium">XLM (Stellar Lumens)</span>
+                <span className="font-bold">XLM (Stellar Lumens)</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Status:</span>
-                <span className="font-medium text-green-600">Active</span>
+                <span className="font-bold text-green-600">Active</span>
               </div>
             </div>
           </div>
 
           {/* Security Tips */}
-          <div className="card">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Security Tips</h3>
-            <ul className="space-y-2 text-sm text-gray-600">
+          <div className="rounded-2xl bg-white/90 border border-gray-100 shadow p-6">
+            <h3 className="text-lg font-bold text-[#1a237e] mb-2">Security Tips</h3>
+            <ul className="space-y-2 text-base text-gray-600">
               <li>• Never share your secret key with anyone</li>
               <li>• Always verify recipient addresses</li>
               <li>• Keep your secret key backed up safely</li>
@@ -222,16 +217,16 @@ const WalletPage = () => {
           </div>
 
           {/* Support */}
-          <div className="card">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Need Help?</h3>
-            <p className="text-sm text-gray-600 mb-4">
+          <div className="rounded-2xl bg-white/90 border border-gray-100 shadow p-6">
+            <h3 className="text-lg font-bold text-[#1a237e] mb-2">Need Help?</h3>
+            <p className="text-base text-gray-600 mb-4">
               Having trouble with your wallet? Check out our resources.
             </p>
             <div className="space-y-2">
-              <a href="#" className="block text-sm text-primary-600 hover:text-primary-700">
+              <a href="#" className="block text-base text-[#2ecc71] hover:text-[#1a237e]">
                 Wallet Guide
               </a>
-              <a href="#" className="block text-sm text-primary-600 hover:text-primary-700">
+              <a href="#" className="block text-base text-[#2ecc71] hover:text-[#1a237e]">
                 Contact Support
               </a>
             </div>
