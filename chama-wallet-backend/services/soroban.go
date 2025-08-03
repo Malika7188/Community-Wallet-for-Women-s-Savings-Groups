@@ -3,27 +3,23 @@ package services
 
 import (
 	"fmt"
-	"os"
 	"os/exec"
 	"strings"
-
-	"github.com/stellar/go/clients/horizonclient"
-	"github.com/stellar/go/network"
 )
 
-const (
-	sorobanRPC = "https://soroban-testnet.stellar.org"
-	// contractID = "CADHKUC557DJ2F2XGEO4BGHFIYQ6O5QDVNG637ANRAGPBSWXMXXPMOI4"
-)
+// var (
+// sorobanRPC = "https://soroban-testnet.stellar.org"
+// contractID = "CADHKUC557DJ2F2XGEO4BGHFIYQ6O5QDVNG637ANRAGPBSWXMXXPMOI4"
+// )
 
-var (
-	rpcURL            = "https://soroban-testnet.stellar.org:443"
-	contractID        = "CADHKUC557DJ2F2XGEO4BGHFIYQ6O5QDVNG637ANRAGPBSWXMXXPMOI4" // Your contract
-	networkPassphrase = network.TestNetworkPassphrase
-	signerSecret      = os.Getenv("SIGNER_SECRET") // Or hardcode temporarily
-	// sorobanClient     = sorobanrpc.NewClient("https://soroban-testnet.stellar.org:443")
-	client = horizonclient.DefaultTestNetClient
-)
+// var (
+// 	rpcURL            = "https://soroban-testnet.stellar.org:443"
+// 	contractID        = "CADHKUC557DJ2F2XGEO4BGHFIYQ6O5QDVNG637ANRAGPBSWXMXXPMOI4" // Your contract
+// 	networkPassphrase = network.TestNetworkPassphrase
+// 	signerSecret      = os.Getenv("SIGNER_SECRET") // Or hardcode temporarily
+// sorobanClient     = sorobanrpc.NewClient("https://soroban-testnet.stellar.org:443")
+// client = horizonclient.DefaultTestNetClient
+// )
 
 type SorobanInvokeRequest struct {
 	ContractID string        `json:"contract_id"`
@@ -33,20 +29,62 @@ type SorobanInvokeRequest struct {
 
 // CallSorobanFunction executes a Soroban contract function
 func CallSorobanFunction(contractID, functionName string, args []string) (string, error) {
-	// Updated command structure based on the new Soroban CLI syntax
 	cmd := []string{
 		"contract", "invoke",
 		"--id", contractID,
-		"--source-account", "<WALLET_ADDRESS>", // Replace with actual source account
 		"--network", "testnet",
 		"--",
 		functionName,
 	}
 
-	// Add the function arguments
-	cmd = append(cmd, args...)
+	// For contribute function, convert args to named parameters
+	if functionName == "contribute" && len(args) >= 2 {
+		cmd = append(cmd, "--user", args[0], "--amount", args[1])
+	} else if functionName == "get_balance" && len(args) >= 1 {
+		cmd = append(cmd, "--user", args[0])
+	} else if functionName == "withdraw" && len(args) >= 2 {
+		cmd = append(cmd, "--user", args[0], "--amount", args[1])
+	} else if functionName == "get_contribution_history" && len(args) >= 1 {
+		cmd = append(cmd, "--user", args[0])
+	} else {
+		// For other functions, add args as-is
+		cmd = append(cmd, args...)
+	}
 
 	// Execute the command
+	out, err := exec.Command("soroban", cmd...).CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("soroban error: %s", string(out))
+	}
+
+	return strings.TrimSpace(string(out)), nil
+}
+
+// Alternative version if source account is needed
+func CallSorobanFunctionWithAuth(contractID, functionName, sourceAccount string, args []string) (string, error) {
+	cmd := []string{
+		"contract", "invoke",
+		"--id", contractID,
+		"--source-account", sourceAccount, // Use actual wallet address
+		"--network", "testnet",
+		"--",
+		functionName,
+	}
+
+	// For contribute function, convert args to named parameters
+	if functionName == "contribute" && len(args) >= 2 {
+		cmd = append(cmd, "--user", args[0], "--amount", args[1])
+	} else if functionName == "get_balance" && len(args) >= 1 {
+		cmd = append(cmd, "--user", args[0])
+	} else if functionName == "withdraw" && len(args) >= 2 {
+		cmd = append(cmd, "--user", args[0], "--amount", args[1])
+	} else if functionName == "get_contribution_history" && len(args) >= 1 {
+		cmd = append(cmd, "--user", args[0])
+	} else {
+		// For other functions, add args as-is
+		cmd = append(cmd, args...)
+	}
+
 	out, err := exec.Command("soroban", cmd...).CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("soroban error: %s", string(out))

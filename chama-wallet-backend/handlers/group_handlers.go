@@ -1,8 +1,15 @@
 package handlers
 
 import (
-	"github.com/gofiber/fiber/v2"
+	"encoding/json"
+	"fmt"
+	"time"
 
+	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
+
+	"chama-wallet-backend/database"
+	"chama-wallet-backend/models"
 	"chama-wallet-backend/services"
 )
 
@@ -40,4 +47,349 @@ func ContributeToGroup(c *fiber.Ctx) error {
 		"amount":  payload.Amount,
 		"tx":      output,
 	})
+}
+
+func GetUserGroups(c *fiber.Ctx) error {
+	user := c.Locals("user").(models.User)
+
+	groups, err := services.GetUserGroups(user.ID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.JSON(groups)
+}
+
+func GetNonGroupMembers(c *fiber.Ctx) error {
+	groupID := c.Params("id")
+	user := c.Locals("user").(models.User)
+
+	// Check if user is admin/creator of the group
+	var admin models.Member
+	if err := database.DB.Where("group_id = ? AND user_id = ? AND role IN ?", 
+		groupID, user.ID, []string{"creator", "admin"}).First(&admin).Error; err != nil {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Insufficient permissions"})
+	}
+
+	// Get users who are not members of this group
+	var users []models.User
+	err := database.DB.
+		Where("id NOT IN (SELECT user_id FROM members WHERE group_id = ?)", groupID).
+		Find(&users).Error
+
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.JSON(users)
+}
+
+func InviteToGroup(c *fiber.Ctx) error {
+	groupID := c.Params("id")
+	user := c.Locals("user").(models.User)
+
+	var payload struct {
+		Email string `json:"email"`
+	}
+
+	if err := c.BodyParser(&payload); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid body"})
+	}
+
+	// Check if user is admin/creator
+	var admin models.Member
+	if err := database.DB.Where("group_id = ? AND user_id = ? AND role IN ?", 
+		groupID, user.ID, []string{"creator", "admin"}).First(&admin).Error; err != nil {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Only admins can invite users"})
+	}
+
+	// Check if user exists
+	var invitedUser models.User
+	if err := database.DB.Where("email = ?", payload.Email).First(&invitedUser).Error; err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "User with this email not found"})
+	}
+
+	// Check if user is already a member
+	var existingMember models.Member
+	if err := database.DB.Where("group_id = ? AND user_id = ?", groupID, invitedUser.ID).First(&existingMember).Error; err == nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "User is already a member of this group"})
+	}
+
+	// Create invitation
+	invitation := models.GroupInvitation{
+		ID:        uuid.NewString(),
+		GroupID:   groupID,
+		InviterID: user.ID,
+		Email:     payload.Email,
+		UserID:    invitedUser.ID,
+		Status:    "pending",
+		CreatedAt: time.Now(),
+		ExpiresAt: time.Now().Add(7 * 24 * time.Hour), // 7 days
+	}
+
+	if err := database.DB.Create(&invitation).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	// Create notification for invited user
+	var group models.Group
+	database.DB.First(&group, "id = ?", groupID)
+
+	notification := models.Notification{
+		ID:        uuid.NewString(),
+		UserID:    invitedUser.ID,
+		GroupID:   groupID,
+		Type:      "group_invitation",
+		Title:     "Group Invitation",
+		Message:   fmt.Sprintf("You have been invited to join %s by %s", group.Name, user.Name),
+		Status:    "unread",
+		Read:      false,
+		CreatedAt: time.Now(),
+	}
+
+	if err := database.DB.Create(&notification).Error; err != nil {
+		fmt.Printf("⚠️ Failed to create notification: %v\n", err)
+	} else {
+		fmt.Printf("✅ Notification created for user %s\n", invitedUser.ID)
+	}
+
+	return c.JSON(fiber.Map{"message": "Invitation sent successfully"})
+}
+
+func ApproveGroup(c *fiber.Ctx) error {
+	groupID := c.Params("id")
+	user := c.Locals("user").(models.User)
+
+	// Check if user is the creator
+	var group models.Group
+	if err := database.DB.Where("id = ? AND creator_id = ?", groupID, user.ID).First(&group).Error; err != nil {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Only group creator can approve the group"})
+	}
+
+	// Check if group has minimum members
+	var memberCount int64
+	database.DB.Model(&models.Member{}).Where("group_id = ? AND status = ?", groupID, "approved").Count(&memberCount)
+	if memberCount < int64(group.MinMembers) {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": fmt.Sprintf("Group needs at least %d members before approval (currently has %d)", group.MinMembers, memberCount),
+		})
+	}
+
+	// Update group approval status
+	if err := database.DB.Model(&group).Update("is_approved", true).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to approve group"})
+	}
+
+	// Notify all members that group is approved
+	var members []models.Member
+	database.DB.Where("group_id = ? AND status = ?", groupID, "approved").Find(&members)
+
+	for _, member := range members {
+		services.CreateNotification(
+			member.UserID,
+			groupID,
+			"group_approved",
+			"Group Approved",
+			"Your group has been approved and is ready for activation",
+		)
+	}
+
+	return c.JSON(fiber.Map{"message": "Group approved successfully"})
+}
+
+func ActivateGroup(c *fiber.Ctx) error {
+	groupID := c.Params("id")
+	user := c.Locals("user").(models.User)
+
+	var payload struct {
+		ContributionAmount float64  `json:"contribution_amount"`
+		ContributionPeriod int      `json:"contribution_period"`
+		PayoutOrder        []string `json:"payout_order"`
+	}
+
+	if err := c.BodyParser(&payload); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid body"})
+	}
+
+	// Debug logging
+	fmt.Printf("Received payout order: %+v\n", payload.PayoutOrder)
+
+	// Check if user is admin/creator
+	var admin models.Member
+	if err := database.DB.Where("group_id = ? AND user_id = ? AND role IN ?",
+		groupID, user.ID, []string{"creator", "admin"}).First(&admin).Error; err != nil {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Only admins can activate groups"})
+	}
+
+	// Check if group is approved
+	var group models.Group
+	if err := database.DB.First(&group, "id = ?", groupID).Error; err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Group not found"})
+	}
+
+	if !group.IsApproved {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Group must be approved before activation"})
+	}
+
+	// Validate payout order
+	if len(payload.PayoutOrder) == 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Payout order cannot be empty"})
+	}
+
+	// Convert payout order to JSON string
+	payoutOrderJSON, err := json.Marshal(payload.PayoutOrder)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid payout order"})
+	}
+
+	fmt.Printf("Payout order JSON: %s\n", string(payoutOrderJSON))
+
+	// Calculate next contribution date
+	nextContributionDate := time.Now().AddDate(0, 0, payload.ContributionPeriod)
+
+	// Update group
+	updates := map[string]interface{}{
+		"status":                "active",
+		"contribution_amount":   payload.ContributionAmount,
+		"contribution_period":   payload.ContributionPeriod,
+		"payout_order":         string(payoutOrderJSON),
+		"current_round":        1,
+		"next_contribution_date": nextContributionDate,
+	}
+
+	if err := database.DB.Model(&group).Where("id = ?", groupID).Updates(updates).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	// Create payout schedule entries
+	var members []models.Member
+	database.DB.Where("group_id = ? AND status = ?", groupID, "approved").Find(&members)
+
+	totalPayout := payload.ContributionAmount * float64(len(members))
+	startDate := time.Now()
+
+	for i, memberID := range payload.PayoutOrder {
+		// Find the member
+		var member models.Member
+		for _, m := range members {
+			if m.UserID == memberID {
+				member = m
+				break
+			}
+		}
+		
+		if member.ID == "" {
+			continue // Skip if member not found
+		}
+		
+		// Calculate due date for this round
+		dueDate := startDate.AddDate(0, 0, i*payload.ContributionPeriod)
+		
+		schedule := models.PayoutSchedule{
+			ID:        uuid.NewString(),
+			GroupID:   groupID,
+			MemberID:  member.ID,
+			Round:     i + 1,
+			Amount:    totalPayout,
+			DueDate:   dueDate,
+			Status:    "scheduled",
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		}
+		
+		database.DB.Create(&schedule)
+	}
+
+	return c.JSON(fiber.Map{"message": "Group activated successfully"})
+}
+
+func JoinGroup(c *fiber.Ctx) error {
+	groupID := c.Params("id")
+	user := c.Locals("user").(models.User)
+
+	// Check if group exists and is active
+	var group models.Group
+	if err := database.DB.First(&group, "id = ?", groupID).Error; err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Group not found"})
+	}
+
+	// Check if group is full
+	var memberCount int64
+	database.DB.Model(&models.Member{}).Where("group_id = ? AND status = ?", groupID, "approved").Count(&memberCount)
+	if memberCount >= int64(group.MaxMembers) {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Group is full"})
+	}
+
+	// Check if user is already a member
+	var existingMember models.Member
+	if err := database.DB.Where("group_id = ? AND user_id = ?", groupID, user.ID).First(&existingMember).Error; err == nil {
+		if existingMember.Status == "pending" {
+			return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "Join request already pending"})
+		}
+		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "Already a member of this group"})
+	}
+
+	// Create new member with pending status
+	member := models.Member{
+		ID:       uuid.NewString(),
+		GroupID:  groupID,
+		UserID:   user.ID,
+		Wallet:   user.Wallet,
+		Role:     "member",
+		Status:   "pending",
+		JoinedAt: time.Now(),
+	}
+
+	if err := database.DB.Create(&member).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to join group"})
+	}
+
+	// Create notification for group admins
+	var admins []models.Member
+	database.DB.Where("group_id = ? AND role IN ? AND status = ?",
+		groupID, []string{"creator", "admin"}, "approved").Find(&admins)
+
+	for _, admin := range admins {
+		notification := models.Notification{
+			ID:        uuid.NewString(),
+			UserID:    admin.UserID,
+			GroupID:   groupID,
+			Type:      "join_request",
+			Title:     "New Join Request",
+			Message:   fmt.Sprintf("%s wants to join %s", user.Name, group.Name),
+			Data:      fmt.Sprintf(`{"group_id":"%s","member_id":"%s"}`, groupID, member.ID),
+			Status:    "unread",
+			CreatedAt: time.Now(),
+		}
+		database.DB.Create(&notification)
+	}
+
+	return c.JSON(fiber.Map{
+		"message": "Join request sent successfully",
+		"member":  member,
+	})
+}
+
+func GetPayoutSchedule(c *fiber.Ctx) error {
+	groupID := c.Params("id")
+	user := c.Locals("user").(models.User)
+
+	// Check if user is member of the group
+	var member models.Member
+	if err := database.DB.Where("group_id = ? AND user_id = ? AND status = ?",
+		groupID, user.ID, "approved").First(&member).Error; err != nil {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Not a group member"})
+	}
+
+	var schedules []models.PayoutSchedule
+	err := database.DB.Where("group_id = ?", groupID).
+		Preload("Member.User").
+		Order("round ASC").
+		Find(&schedules).Error
+
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.JSON(schedules)
 }

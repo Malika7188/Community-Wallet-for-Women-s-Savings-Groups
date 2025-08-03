@@ -18,7 +18,8 @@ func SetupSorobanRoutes(app *fiber.App) {
 			return c.Status(400).JSON(fiber.Map{"error": "Invalid body"})
 		}
 
-		resp, err := services.CallSorobanFunction(contractID, "contribute", []string{body.Address, body.Amount})
+		// Use CallSorobanFunctionWithAuth with the user's address as source account
+		resp, err := services.CallSorobanFunctionWithAuth(contractID, "contribute", body.Address, []string{body.Address, body.Amount})
 		if err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 		}

@@ -2,8 +2,8 @@
 *.exe
 *.out
 *.test
-*.mod
-*.sum
+# *.mod
+# *.sum
 bin/
 vendor/
 
