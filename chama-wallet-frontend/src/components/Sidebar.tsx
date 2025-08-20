@@ -1,6 +1,7 @@
 
 // import React from 'react';
-import { HomeIcon, UsersIcon, WalletIcon, ChartBarIcon, Cog6ToothIcon, ArrowLeftOnRectangleIcon } from '@heroicons/react/24/outline';
+import { HomeIcon, UsersIcon, WalletIcon, ChartBarIcon, Cog6ToothIcon, ArrowLeftOnRectangleIcon, BellIcon } from '@heroicons/react/24/outline';
+import NotificationCenter from './NotificationCenter';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -9,6 +10,7 @@ const navItems = [
   { name: 'Groups', icon: UsersIcon, to: '/groups' },
   { name: 'Wallet', icon: WalletIcon, to: '/wallet' },
   { name: 'Activity', icon: ChartBarIcon, to: '/transactions' },
+  // Notification dropdown will be rendered separately
   { name: 'Settings', icon: Cog6ToothIcon, to: '/settings' },
 ];
 
@@ -22,7 +24,7 @@ const Sidebar = () => {
       </div>
       <nav className="flex-1">
         <ul className="space-y-2">
-          {navItems.map(({ name, icon: Icon, to }) => (
+          {navItems.slice(0, 4).map(({ name, icon: Icon, to }) => (
             <li key={name}>
               <Link
                 to={to}
@@ -33,6 +35,20 @@ const Sidebar = () => {
               </Link>
             </li>
           ))}
+          {/* Notification dropdown */}
+          <li>
+            <NotificationCenter />
+          </li>
+          {/* Settings link */}
+          <li>
+            <Link
+              to={navItems[4].to}
+              className={`flex items-center px-4 py-3 rounded-lg transition-colors duration-200 text-white hover:bg-[#2ecc71] hover:text-[#1a237e] ${location.pathname === navItems[4].to ? 'bg-[#2ecc71] text-[#1a237e]' : ''}`}
+            >
+              <Cog6ToothIcon className="h-6 w-6 mr-3" />
+              <span className="font-medium">Settings</span>
+            </Link>
+          </li>
         </ul>
       </nav>
       <div className="mt-8 flex flex-col items-center gap-3">
