@@ -6,6 +6,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"github.com/stellar/go/keypair"
 
 	"chama-wallet-backend/database"
 	"chama-wallet-backend/models"
@@ -24,6 +25,20 @@ func ContributeToRound(c *fiber.Ctx) error {
 
 	if err := c.BodyParser(&payload); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid body"})
+	}
+
+	// ✅ Validate the secret key belongs to the user
+	kp, err := keypair.ParseFull(payload.Secret)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Invalid secret key format",
+		})
+	}
+
+	if kp.Address() != user.Wallet {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Secret key does not match your wallet address",
+		})
 	}
 
 	// Verify user is a member of the group
@@ -57,11 +72,13 @@ func ContributeToRound(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "Already contributed for this round"})
 	}
 
-	// Make Soroban contract call
+	// ✅ Make Soroban contract call with user's secret key
 	args := []string{user.Wallet, fmt.Sprintf("%.0f", payload.Amount*10000000)} // Convert to stroops
-	output, err := services.CallSorobanFunction(group.ContractID, "contribute", args)
+	output, err := services.CallSorobanFunctionWithAuth(group.ContractID, "contribute", payload.Secret, args)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": fmt.Sprintf("Blockchain transaction failed: %v", err),
+		})
 	}
 
 	// Record the contribution
