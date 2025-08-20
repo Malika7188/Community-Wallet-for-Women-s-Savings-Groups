@@ -18,7 +18,7 @@ const Sidebar = () => {
   const location = useLocation();
   const { logout } = useAuth();
   return (
-    <aside className="h-screen w-64 bg-[#1a237e] flex flex-col py-8 px-4 shadow-lg">
+  <aside className="fixed top-0 left-0 h-screen w-64 bg-[#1a237e] flex flex-col py-8 px-4 shadow-lg z-40">
       <div className="mb-10 flex items-center justify-center">
         <span className="text-2xl font-bold text-white tracking-wide">Chama Wallet</span>
       </div>
