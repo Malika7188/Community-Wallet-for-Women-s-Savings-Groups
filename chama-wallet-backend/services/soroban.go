@@ -2,7 +2,9 @@
 package services
 
 import (
+	"bytes"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 )
@@ -61,36 +63,70 @@ func CallSorobanFunction(contractID, functionName string, args []string) (string
 }
 
 // Alternative version if source account is needed
-func CallSorobanFunctionWithAuth(contractID, functionName, sourceAccount string, args []string) (string, error) {
-	cmd := []string{
+func CallSorobanFunctionWithAuth(contractID, functionName, userSecretKey string, args []string) (string, error) {
+	if contractID == "" {
+		return "", fmt.Errorf("contract ID is required")
+	}
+
+	if userSecretKey == "" {
+		return "", fmt.Errorf("user secret key is required")
+	}
+
+	keyName := fmt.Sprintf("temp-user-key-%d", os.Getpid())
+
+	// Add user's key temporarily
+	addKeyCmd := exec.Command("soroban", "keys", "add", keyName, "--secret-key")
+	addKeyCmd.Stdin = strings.NewReader(userSecretKey)
+
+	var addKeyStderr bytes.Buffer
+	addKeyCmd.Stderr = &addKeyStderr
+
+	if err := addKeyCmd.Run(); err != nil {
+		return "", fmt.Errorf("failed to add user key: %v, stderr: %s", err, addKeyStderr.String())
+	}
+
+	// Ensure cleanup
+	defer func() {
+		cleanupCmd := exec.Command("soroban", "keys", "rm", keyName)
+		cleanupCmd.Run() // Ignore errors in cleanup
+	}()
+
+	// Build command arguments
+	cmdArgs := []string{
 		"contract", "invoke",
 		"--id", contractID,
-		"--source-account", sourceAccount, // Use actual wallet address
+		"--source-account", keyName, // Use the temporary key
 		"--network", "testnet",
-		"--",
-		functionName,
+		"--", functionName,
 	}
 
-	// For contribute function, convert args to named parameters
+	// Add function-specific arguments - keeping your existing logic
 	if functionName == "contribute" && len(args) >= 2 {
-		cmd = append(cmd, "--user", args[0], "--amount", args[1])
+		cmdArgs = append(cmdArgs, "--user", args[0], "--amount", args[1])
 	} else if functionName == "get_balance" && len(args) >= 1 {
-		cmd = append(cmd, "--user", args[0])
+		cmdArgs = append(cmdArgs, "--user", args[0])
 	} else if functionName == "withdraw" && len(args) >= 2 {
-		cmd = append(cmd, "--user", args[0], "--amount", args[1])
+		cmdArgs = append(cmdArgs, "--user", args[0], "--amount", args[1])
 	} else if functionName == "get_contribution_history" && len(args) >= 1 {
-		cmd = append(cmd, "--user", args[0])
+		cmdArgs = append(cmdArgs, "--user", args[0])
 	} else {
 		// For other functions, add args as-is
-		cmd = append(cmd, args...)
+		cmdArgs = append(cmdArgs, args...)
 	}
 
-	out, err := exec.Command("soroban", cmd...).CombinedOutput()
-	if err != nil {
-		return "", fmt.Errorf("soroban error: %s", string(out))
+	// Execute the command
+	cmd := exec.Command("soroban", cmdArgs...)
+
+	var out bytes.Buffer
+	var stderr bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		return "", fmt.Errorf("soroban invoke failed: %v, stderr: %s", err, stderr.String())
 	}
 
-	return strings.TrimSpace(string(out)), nil
+	return strings.TrimSpace(out.String()), nil
 }
 
 // Contribute function wrapper
