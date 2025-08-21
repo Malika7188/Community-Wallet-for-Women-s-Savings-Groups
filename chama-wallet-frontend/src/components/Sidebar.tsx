@@ -10,7 +10,7 @@ const navItems = [
   { name: 'Groups', icon: UsersIcon, to: '/groups' },
   { name: 'Wallet', icon: WalletIcon, to: '/wallet' },
   { name: 'Activity', icon: ChartBarIcon, to: '/transactions' },
-  { name: 'Settings', icon: Cog6ToothIcon, to: '/settings' },
+  // { name: 'Settings', icon: Cog6ToothIcon, to: '/settings' },
 ];
 
 interface SidebarProps {
