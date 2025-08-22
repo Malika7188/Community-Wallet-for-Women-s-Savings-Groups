@@ -195,8 +195,8 @@ func ApprovePayoutRequest(c *fiber.Ctx) error {
 
 	fmt.Printf("📊 Payout %s - Approvals: %d, Rejections: %d\n", payoutID, approvalCount, rejectionCount)
 
-	// Process payout if we have enough approvals (2 admins) or any rejection
-	if approvalCount >= 2 {
+	// Process payout if we have enough approvals (1 admins) or any rejection
+	if approvalCount >= 1 {
 		fmt.Printf("✅ Payout approved with %d approvals, processing...\n", approvalCount)
 		
 		// Update payout status to approved
@@ -222,10 +222,23 @@ func ApprovePayoutRequest(c *fiber.Ctx) error {
 			Where("id = ?", payoutID).
 			Update("status", "completed")
 
+		// Fetch group details again to get the latest CurrentRound and ContributionPeriod
+		var currentGroup models.Group
+		if err := database.DB.First(&currentGroup, "id = ?", payoutRequest.GroupID).Error; err != nil {
+			fmt.Printf("❌ Failed to fetch group details for round update: %v\n", err)
+		} else {
+			// Increment current round and update next contribution date
+			database.DB.Model(&models.Group{}).
+				Where("id = ?", payoutRequest.GroupID).
+				Update("current_round", currentGroup.CurrentRound + 1).
+				Update("next_contribution_date", time.Now().AddDate(0, 0, currentGroup.ContributionPeriod))
+		}
+
 		// Notify all members about successful payout
 		var members []models.Member
 		database.DB.Where("group_id = ? AND status = ?",
-			payoutRequest.GroupID, "approved").Find(&members)
+			payoutRequest.GroupID,
+			"approved").Find(&members)
 
 		for _, member := range members {
 			services.CreateNotification(
@@ -255,7 +268,7 @@ func ApprovePayoutRequest(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{
-		"message": fmt.Sprintf("Approval recorded, waiting for more approvals (%d/2)", approvalCount),
+		"message": fmt.Sprintf("Approval recorded, waiting for more approvals (%d/1)", approvalCount),
 		"status":  "pending",
 	})
 }
@@ -281,26 +294,14 @@ func executePayout(payoutRequest models.PayoutRequest) error {
 		return fmt.Errorf("group secret key not available")
 	}
 
-	// Execute withdrawal from contract to recipient
-	amountStr := fmt.Sprintf("%.0f", payoutRequest.Amount*10000000) // Convert to stroops
-	result, err := services.CallSorobanFunctionWithAuth(
-		group.ContractID, 
-		"withdraw", 
-		group.SecretKey, 
-		[]string{recipient.Wallet, amountStr},
-	)
+	// Send actual XLM from group wallet to recipient
+	_, err := services.SendXLM(group.SecretKey, recipient.Wallet, fmt.Sprintf("%.7f", payoutRequest.Amount))
 	if err != nil {
+		fmt.Printf("⚠️ Warning: XLM transfer failed but contract withdrawal succeeded: %v\n", err)
 		return fmt.Errorf("soroban withdrawal failed: %w", err)
 	}
 
-	// Also send actual XLM from group wallet to recipient
-	_, err = services.SendXLM(group.SecretKey, recipient.Wallet, fmt.Sprintf("%.7f", payoutRequest.Amount))
-	if err != nil {
-		fmt.Printf("⚠️ Warning: XLM transfer failed but contract withdrawal succeeded: %v\n", err)
-		// Don't fail the entire payout since contract withdrawal succeeded
-	}
-
-	fmt.Printf("✅ Payout executed successfully: %s\n", result)
+	fmt.Printf("✅ Payout executed successfully")
 	return nil
 }
 
