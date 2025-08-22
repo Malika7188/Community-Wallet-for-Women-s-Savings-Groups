@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -14,38 +15,104 @@ import (
 )
 
 func ContributeToGroup(c *fiber.Ctx) error {
-	// ContractID := "CADHKUC557DJ2F2XGEO4BGHFIYQ6O5QDVNG637ANRAGPBSWXMXXPMOI4"
-
 	groupID := c.Params("id")
+	user := c.Locals("user").(models.User)
 
 	var payload struct {
 		From   string `json:"from"`
 		Secret string `json:"secret"`
 		Amount string `json:"amount"`
 	}
+	
 	if err := c.BodyParser(&payload); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid body"})
+		fmt.Printf("❌ Failed to parse request body: %v\n", err)
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
 	}
 
+	// Validate required fields
+	if payload.From == "" || payload.Secret == "" || payload.Amount == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Missing required fields: from, secret, and amount are required",
+		})
+	}
+
+	// Verify user is a member of the group
+	var member models.Member
+	if err := database.DB.Where("group_id = ? AND user_id = ? AND status = ?",
+		groupID, user.ID, "approved").First(&member).Error; err != nil {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"error": "You are not an approved member of this group",
+		})
+	}
+
+	// Get group details
 	group, err := services.GetGroupByID(groupID)
 	if err != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "group not found"})
+		fmt.Printf("❌ Group not found: %v\n", err)
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Group not found"})
 	}
 
-	// 🔁 Soroban contract call instead of native XLM payment
-	args := []string{payload.From, payload.Amount}
-	output, err := services.CallSorobanFunction(group.ContractID, "contribute", args)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	// Validate group status
+	if group.Status != "active" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": fmt.Sprintf("Group is not active (current status: %s)", group.Status),
+		})
 	}
+
+	// Validate contract ID
+	if group.ContractID == "" {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Group contract ID is not set",
+		})
+	}
+
+	// Validate user's wallet address matches the 'from' field
+	if payload.From != user.Wallet {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "From address must match your wallet address",
+		})
+	}
+
+	fmt.Printf("🔄 Processing contribution: %s XLM from %s to group %s (contract: %s)\n", 
+		payload.Amount, payload.From, group.Name, group.ContractID)
+
+	// Make authenticated Soroban contract call
+	output, err := services.ContributeWithAuth(group.ContractID, payload.From, payload.Amount, payload.Secret)
+	if err != nil {
+		fmt.Printf("❌ Soroban contribution failed: %v\n", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": fmt.Sprintf("Blockchain transaction failed: %v", err),
+		})
+	}
+
+	// Record the contribution in the database
+	contribution := models.Contribution{
+		ID:        uuid.NewString(),
+		GroupID:   groupID,
+		UserID:    user.ID,
+		Amount:    parseFloat64(payload.Amount),
+		Status:    "confirmed",
+		TxHash:    output,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+
+	if err := database.DB.Create(&contribution).Error; err != nil {
+		fmt.Printf("⚠️ Warning: Failed to record contribution in database: %v\n", err)
+		// Don't fail the request since blockchain transaction succeeded
+	}
+
+	fmt.Printf("✅ Contribution successful: %s\n", output)
 
 	return c.JSON(fiber.Map{
-		"message": "Contribution successful via Soroban",
-		"group":   groupID,
-		"from":    payload.From,
-		"to":      group.Wallet,
-		"amount":  payload.Amount,
-		"tx":      output,
+		"message":      "Contribution successful",
+		"group_id":     groupID,
+		"group_name":   group.Name,
+		"from":         payload.From,
+		"to":           group.Wallet,
+		"amount":       payload.Amount,
+		"tx_hash":      output,
+		"contribution": contribution,
 	})
 }
 
@@ -301,6 +368,14 @@ func ActivateGroup(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{"message": "Group activated successfully"})
+}
+
+// Helper function to parse float64 safely
+func parseFloat64(s string) float64 {
+	if val, err := strconv.ParseFloat(s, 64); err == nil {
+		return val
+	}
+	return 0.0
 }
 
 func JoinGroup(c *fiber.Ctx) error {

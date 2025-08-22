@@ -6,6 +6,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"github.com/stellar/go/keypair"
 
 	"chama-wallet-backend/database"
 	"chama-wallet-backend/models"
@@ -24,6 +25,20 @@ func ContributeToRound(c *fiber.Ctx) error {
 
 	if err := c.BodyParser(&payload); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid body"})
+	}
+
+	// ✅ Validate the secret key belongs to the user
+	kp, err := keypair.ParseFull(payload.Secret)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Invalid secret key format",
+		})
+	}
+
+	if kp.Address() != user.Wallet {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Secret key does not match your wallet address",
+		})
 	}
 
 	// Verify user is a member of the group
@@ -57,12 +72,23 @@ func ContributeToRound(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "Already contributed for this round"})
 	}
 
-	// Make Soroban contract call
-	args := []string{user.Wallet, fmt.Sprintf("%.0f", payload.Amount*10000000)} // Convert to stroops
-	output, err := services.CallSorobanFunction(group.ContractID, "contribute", args)
+	// Perform direct XLM transfer from user to group wallet
+	tx, err := services.SendXLM(payload.Secret, group.Wallet, fmt.Sprintf("%.7f", payload.Amount))
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		fmt.Printf("❌ Failed to send XLM: %v\n", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": fmt.Sprintf("Failed to transfer funds: %v", err),
+		})
 	}
+	output := tx.Hash // Use the transaction hash as output
+	fmt.Printf("✅ XLM transferred successfully. Transaction Hash: %s\n", output)
+
+	// Note: If the smart contract still needs to track contributions,
+	// you might need to call an unauthenticated 'record_contribution'
+	// function on the smart contract here, passing the user's public key
+	// and the amount. However, this would require modifying the smart contract
+	// to have such a function and ensuring proper authorization for it.
+	// For now, we are only performing the direct transfer.
 
 	// Record the contribution
 	contribution := models.RoundContribution{

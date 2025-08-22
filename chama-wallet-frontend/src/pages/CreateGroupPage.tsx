@@ -31,28 +31,27 @@ const CreateGroupPage = () => {
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
         <Link 
           to="/groups" 
-          className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4"
+          className="inline-flex items-center text-[#1a237e] hover:text-[#2ecc71] mb-4 font-semibold transition"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Groups
         </Link>
-        
         <div className="text-center">
-          <div className="w-16 h-16 bg-gradient-to-r from-stellar-500 to-primary-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 bg-gradient-to-r from-[#2ecc71] to-[#1a237e] rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
             <Users className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900">Create New Group</h1>
+          <h1 className="text-3xl font-bold text-[#1a237e]">Create New Group</h1>
           <p className="text-gray-600 mt-2">
             Start a new savings group and invite your community
           </p>
         </div>
       </div>
 
-      <div className="card">
+      <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl p-8 mb-8 border border-gray-100">
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
@@ -63,7 +62,7 @@ const CreateGroupPage = () => {
               id="name"
               name="name"
               required
-              className="input"
+              className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-[#2ecc71] focus:ring-2 focus:ring-[#2ecc71] bg-white/90 text-gray-900 placeholder-gray-400 shadow"
               placeholder="Enter group name (e.g., Alpha Chama)"
               value={formData.name}
               onChange={handleChange}
@@ -82,7 +81,7 @@ const CreateGroupPage = () => {
               name="description"
               required
               rows={4}
-              className="input resize-none"
+              className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-[#2ecc71] focus:ring-2 focus:ring-[#2ecc71] bg-white/90 text-gray-900 placeholder-gray-400 shadow resize-none"
               placeholder="Describe the purpose and goals of your group..."
               value={formData.description}
               onChange={handleChange}
@@ -107,14 +106,14 @@ const CreateGroupPage = () => {
           <div className="flex flex-col sm:flex-row gap-4">
             <Link 
               to="/groups" 
-              className="btn btn-secondary flex-1"
+              className="flex-1 inline-flex items-center justify-center px-4 py-3 rounded-lg border border-[#1a237e] text-[#1a237e] font-semibold bg-white hover:bg-[#2ecc71] hover:text-white transition"
             >
               Cancel
             </Link>
             <button
               type="submit"
               disabled={createGroup.isPending}
-              className="btn btn-primary flex-1"
+              className="flex-1 inline-flex items-center justify-center px-4 py-3 rounded-lg border border-[#2ecc71] bg-[#2ecc71] text-white font-semibold shadow hover:bg-[#27ae60] transition"
             >
               {createGroup.isPending ? 'Creating Group...' : 'Create Group'}
             </button>

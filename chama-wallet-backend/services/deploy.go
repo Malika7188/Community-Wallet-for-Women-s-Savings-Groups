@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/joho/godotenv"
 )
@@ -45,26 +46,34 @@ func DeployChamaContract() (string, error) {
 	secret := os.Getenv("SOROBAN_SECRET_KEY")
 
 	if source == "" || secret == "" {
-		return "", fmt.Errorf("missing SOROBAN_PUBLIC_KEY or SOROBAN_SECRET_KEY in environment")
+		// Fallback to default test account
+		source = "malika"
+		secret = os.Getenv("SOROBAN_SECRET_KEY")
+		if secret == "" {
+			return "", fmt.Errorf("missing SOROBAN_SECRET_KEY in environment")
+		}
 	}
 
 	// Check if WASM file exists
-	wasmPath := "./chama_savings.wasm"
+	wasmPath := "./chama_savings/target/wasm32-unknown-unknown/release/chama_savings.wasm"
 	if _, err := os.Stat(wasmPath); os.IsNotExist(err) {
-		return "", fmt.Errorf("WASM file not found at %s", wasmPath)
+		// Try alternative path
+		wasmPath = "./chama_savings.wasm"
+		if _, err := os.Stat(wasmPath); os.IsNotExist(err) {
+			return "", fmt.Errorf("WASM file not found. Please build the contract first with: cd chama_savings && stellar contract build")
+		}
 	}
 
-	// Method 1: Try using the secret key directly with SOROBAN_SECRET_KEY environment variable
-	// Set the secret key in environment for the command
+	fmt.Printf("🔧 Deploying contract from WASM: %s\n", wasmPath)
+	fmt.Printf("🔧 Using source account: %s\n", source)
+
+	// Deploy using source account name (should be configured in soroban keys)
 	cmd := exec.Command("soroban",
 		"contract", "deploy",
 		"--wasm", wasmPath,
 		"--source-account", source,
 		"--network", "testnet",
 	)
-
-	// Set environment variables for the command
-	cmd.Env = append(os.Environ(), fmt.Sprintf("SOROBAN_SECRET_KEY=%s", secret))
 
 	fmt.Println("🚀 Running deployment command...")
 
@@ -77,28 +86,35 @@ func DeployChamaContract() (string, error) {
 	// Execute
 	execErr := cmd.Run()
 	if execErr != nil {
-		fmt.Println("❌ Deployment error:", execErr)
-		fmt.Println("❗ stderr:", stderr.String())
+		fmt.Printf("❌ Deployment error: %v\n", execErr)
+		fmt.Printf("❗ stderr: %s\n", stderr.String())
+		fmt.Printf("❗ stdout: %s\n", out.String())
 
-		// Try alternative method with soroban keys
+		// Try alternative method with temporary key storage
 		return deployWithKeyStorage(source, secret)
 	}
 
 	output := strings.TrimSpace(out.String())
-	fmt.Println("✅ Contract deployed. Output:", output)
+	fmt.Printf("✅ Contract deployed successfully. Output: %s\n", output)
 
 	// Extract contract address from output (usually the last line)
 	lines := strings.Split(output, "\n")
 	contractAddress := strings.TrimSpace(lines[len(lines)-1])
 
+	// Validate contract address format
+	if len(contractAddress) != 56 || !strings.HasPrefix(contractAddress, "C") {
+		return "", fmt.Errorf("invalid contract address format: %s", contractAddress)
+	}
+
+	fmt.Printf("✅ Contract deployed at address: %s\n", contractAddress)
 	return contractAddress, nil
 }
 
-// Alternative method: Store key temporarily in soroban keys
+// deployWithKeyStorage: Alternative deployment method using temporary key storage
 func deployWithKeyStorage(source, secret string) (string, error) {
 	fmt.Println("🔄 Trying alternative deployment method with key storage...")
 
-	keyName := "temp-deploy-key"
+	keyName := fmt.Sprintf("temp-deploy-key-%d", time.Now().Unix())
 
 	// Step 1: Add key to soroban keys
 	addKeyCmd := exec.Command("soroban", "keys", "add", keyName, "--secret-key")
@@ -112,17 +128,27 @@ func deployWithKeyStorage(source, secret string) (string, error) {
 		return "", fmt.Errorf("failed to add key: %v", err)
 	}
 
+	fmt.Printf("✅ Temporary key added: %s\n", keyName)
+
 	// Ensure cleanup
 	defer func() {
+		fmt.Printf("🧹 Cleaning up temporary key: %s\n", keyName)
 		cleanupCmd := exec.Command("soroban", "keys", "rm", keyName)
-		cleanupCmd.Run() // Ignore errors in cleanup
+		if err := cleanupCmd.Run(); err != nil {
+			fmt.Printf("⚠️ Warning: Failed to cleanup key: %v\n", err)
+		}
 	}()
 
 	// Step 2: Deploy using the stored key
+	wasmPath := "./chama_savings/target/wasm32-unknown-unknown/release/chama_savings.wasm"
+	if _, err := os.Stat(wasmPath); os.IsNotExist(err) {
+		wasmPath = "./chama_savings.wasm"
+	}
+
 	deployCmd := exec.Command("soroban",
 		"contract", "deploy",
-		"--wasm", "./chama_savings.wasm",
-		"--source-account", keyName, // Use the key name instead of address
+		"--wasm", wasmPath,
+		"--source-account", keyName,
 		"--network", "testnet",
 	)
 
@@ -137,11 +163,16 @@ func deployWithKeyStorage(source, secret string) (string, error) {
 	}
 
 	output := strings.TrimSpace(out.String())
-	fmt.Println("✅ Contract deployed with key storage. Output:", output)
+	fmt.Printf("✅ Contract deployed with key storage. Output: %s\n", output)
 
 	// Extract contract address from output
 	lines := strings.Split(output, "\n")
 	contractAddress := strings.TrimSpace(lines[len(lines)-1])
+
+	// Validate contract address format
+	if len(contractAddress) != 56 || !strings.HasPrefix(contractAddress, "C") {
+		return "", fmt.Errorf("invalid contract address format: %s", contractAddress)
+	}
 
 	return contractAddress, nil
 }

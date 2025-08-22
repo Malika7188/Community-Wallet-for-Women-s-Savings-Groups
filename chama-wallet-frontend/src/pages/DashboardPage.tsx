@@ -1,16 +1,36 @@
 import { useAuth } from '../contexts/AuthContext';
 import { useGroups } from '../hooks/useGroups';
-import { useBalance } from '../hooks/useWallet';
+import { useBalance, useTransactions } from '../hooks/useWallet'; // Added useTransactions
 import { Link } from 'react-router-dom';
 import { UsersIcon, WalletIcon, ChartBarIcon, PlusIcon } from '@heroicons/react/24/outline';
 import LoadingSpinner from '../components/LoadingSpinner';
 import BankCard from '../components/BankCard';
-import TransactionHistory from '../components/TransactionHistory';
+// import TransactionHistory from '../components/TransactionHistory'; // Removed
+import { ExternalLink, ArrowUpRight, ArrowDownRight, Clock } from 'lucide-react'; // Added lucide-react imports
 
 const DashboardPage = () => {
   const { user } = useAuth()
   const { data: groups, isLoading: groupsLoading } = useGroups()
   const { data: balance, isLoading: balanceLoading } = useBalance(user?.wallet || '')
+  const { data: transactions, isLoading: transactionsLoading } = useTransactions(user?.wallet || '') // Added
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
+
+  const getTransactionIcon = (hash: string) => {
+    return Math.random() > 0.5 ? ArrowUpRight : ArrowDownRight
+  }
+
+  const getTransactionColor = (hash: string) => {
+    return Math.random() > 0.5 ? 'text-green-600' : 'text-red-600'
+  }
 
   const stats = [
     {
@@ -31,29 +51,6 @@ const DashboardPage = () => {
       icon: <ChartBarIcon className="w-7 h-7" />,
       colorClass: 'bg-[#2ecc71]',
       progress: 60, // Example progress
-    },
-  ];
-
-  const recentActivity: {
-    type: 'contribution' | 'withdrawal';
-    description: string;
-    amount: string;
-    time: string;
-    group: string;
-  }[] = [
-    {
-      type: 'contribution',
-      description: 'Contributed to Alpha Chama',
-      amount: '+50 XLM',
-      time: '2 hours ago',
-      group: 'Alpha Chama',
-    },
-    {
-      type: 'withdrawal',
-      description: 'Withdrew from Beta Group',
-      amount: '-25 XLM',
-      time: '1 day ago',
-      group: 'Beta Group',
     },
   ];
 
@@ -115,7 +112,83 @@ const DashboardPage = () => {
         </div>
 
         {/* Recent Activity */}
-        <TransactionHistory transactions={recentActivity} />
+        <div className="bg-white rounded-2xl shadow-md p-6">
+          <h2 className="text-xl font-semibold text-[#1a237e] mb-4">Recent Activity</h2>
+          {transactionsLoading ? (
+            <div className="flex justify-center py-8">
+              <LoadingSpinner />
+            </div>
+          ) : transactions?.data?.transactions?.length === 0 ? (
+            <div className="text-center py-8">
+              <Clock className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-600 mb-4">No recent transactions</p>
+              <Link to="/transactions" className="inline-block px-4 py-2 border border-[#1a237e] text-[#1a237e] rounded-lg font-semibold hover:bg-[#f5f6fa] transition">View All Transactions</Link>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {transactions?.data?.transactions?.slice(0, 2).map((tx) => { // Limit to 2 transactions
+                const Icon = getTransactionIcon(tx.hash)
+                const colorClass = getTransactionColor(tx.hash)
+
+                return (
+                  <div
+                    key={tx.hash}
+                    className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-center">
+                      <div className={`w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center`}>
+                        <Icon className={`w-5 h-5 ${colorClass}`} />
+                      </div>
+                      <div className="ml-4">
+                        <div className="flex items-center space-x-2">
+                          <p className="font-medium text-gray-900">
+                            Transaction
+                          </p>
+                          <span className={`px-2 py-1 text-xs rounded-full ${
+                            tx.successful
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-red-100 text-red-800'
+                          }`}>
+                            {tx.successful ? 'Success' : 'Failed'}
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-4 text-sm text-gray-600">
+                          <span>Ledger: {tx.ledger}</span>
+                          <span>{formatDate(tx.created_at)}</span>
+                          <span>Fee: {tx.fee_charged} stroops</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center space-x-3">
+                      <div className="text-right">
+                        <code className="text-xs text-gray-500 block">
+                          {tx.hash.slice(0, 8)}...{tx.hash.slice(-8)}
+                        </code>
+                        {tx.memo && (
+                          <p className="text-xs text-gray-600 mt-1">
+                            Memo: {tx.memo}
+                          </p>
+                        )}
+                      </div>
+                      <a
+                        href={`https://stellar.expert/explorer/testnet/tx/${tx.hash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-2 text-gray-400 hover:text-gray-600"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </a>
+                    </div>
+                  </div>
+                )
+              })}
+              <div className="text-center pt-2">
+                <Link to="/transactions" className="inline-block px-4 py-2 border border-[#1a237e] text-[#1a237e] rounded-lg font-semibold hover:bg-[#f5f6fa] transition">View All Transactions</Link>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Quick Actions */}

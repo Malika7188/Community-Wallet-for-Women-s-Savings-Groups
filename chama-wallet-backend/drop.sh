@@ -11,6 +11,8 @@ DROP TABLE IF EXISTS notifications CASCADE;
 DROP TABLE IF EXISTS groups CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
 DROP TABLE IF EXISTS payout_schedules CASCADE;
+DROP TABLE IF EXISTS round_contributions CASCADE;
+DROP TABLE IF EXISTS round_statuses CASCADE;
 " 
 
 echo "🔄 Setting up database permissions..."

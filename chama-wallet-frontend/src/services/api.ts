@@ -104,6 +104,7 @@ export const payoutApi = {
 export const notificationApi = {
   getNotifications: () => api.get<Notification[]>('/notifications'),
   markAsRead: (id: string) => api.put(`/notifications/${id}/read`),
+  clearNotification: (id: string) => api.delete(`/notifications/${id}`),
   getInvitations: () => api.get<GroupInvitation[]>('/invitations'),
   acceptInvitation: (id: string) => api.post(`/invitations/${id}/accept`),
   rejectInvitation: (id: string) => api.post(`/invitations/${id}/reject`),
