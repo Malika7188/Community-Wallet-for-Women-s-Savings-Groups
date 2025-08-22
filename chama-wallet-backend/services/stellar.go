@@ -80,7 +80,7 @@ func SendXLM(seed, destination, amount string) (horizon.Transaction, error) {
 			IncrementSequenceNum: true,
 			Operations:           []txnbuild.Operation{&op},
 			BaseFee:              txnbuild.MinBaseFee,
-			// Timebounds:           txnbuild.NewInfiniteTimeout(),
+			Preconditions:        txnbuild.Preconditions{TimeBounds: txnbuild.NewInfiniteTimeout()},
 		},
 	)
 	if err != nil {
