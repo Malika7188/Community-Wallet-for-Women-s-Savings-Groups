@@ -112,6 +112,11 @@ func ContributeToRound(c *fiber.Ctx) error {
 		fmt.Printf("Warning: Failed to update round status: %v\n", err)
 	}
 
+	// Check if round is now complete and trigger automatic payout creation
+	aps := &services.AutomatedPayoutService{}
+	if err := aps.CheckAndCreateAutomaticPayouts(); err != nil {
+		fmt.Printf("⚠️ Warning: Failed to check automatic payouts: %v\n", err)
+	}
 	return c.JSON(fiber.Map{
 		"message":      "Contribution successful",
 		"contribution": contribution,

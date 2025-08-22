@@ -32,6 +32,10 @@ func main() {
 	routes.SetupSorobanRoutes(app)
 	routes.GroupRoutes(app)
 	routes.AuthRoutes(app)
+	routes.AutomatedPayoutRoutes(app)
+
+	// Start automated payout worker
+	services.StartAutomatedPayoutWorker()
 
 	fmt.Println("🚀 Server starting on localhost:3000")
 	log.Fatal(app.Listen("localhost:3000"))
