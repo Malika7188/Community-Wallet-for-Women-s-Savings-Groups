@@ -199,9 +199,9 @@ Content-Type: application/json
 }
 ```
 
-### Generate Keypair
+### Generate New Credentials
 ```http
-GET /generate-keypair
+GET /generate-newkey
 ```
 
 ### Fund Account (Testnet)
