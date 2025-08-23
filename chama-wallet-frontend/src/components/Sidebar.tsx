@@ -29,7 +29,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
   return (
     <aside className={`fixed top-0 left-0 h-screen bg-[#1a237e] flex flex-col py-8 px-4 shadow-lg z-40 transition-width duration-300 ${isCollapsed ? 'w-20' : 'w-64'}`}>
       <div className="mb-10 flex items-center justify-between">
-        {!isCollapsed && <span className="text-2xl font-bold text-white tracking-wide">Chama Wallet</span>}
+  {!isCollapsed && <span className="text-2xl font-bold text-white tracking-wide">Umoja Wallet</span>}
         <button onClick={toggleSidebar} className="text-white hover:text-[#2ecc71]">
           <Bars3Icon className="h-8 w-8" />
         </button>
@@ -64,7 +64,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
           <ArrowLeftOnRectangleIcon className="h-6 w-6" />
           {!isCollapsed && <span className="ml-3">Logout</span>}
         </button>
-        {!isCollapsed && <span className="text-xs text-gray-300">Secured by Chama Wallet</span>}
+  {!isCollapsed && <span className="text-xs text-gray-300">Secured by Umoja Wallet</span>}
       </div>
     </aside>
   );
