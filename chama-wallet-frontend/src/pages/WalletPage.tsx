@@ -175,10 +175,10 @@ const WalletPage = () => {
               <button
                 onClick={handleGenerateKeypair}
                 disabled={generateKeypair.isPending}
-                className="inline-flex items-center justify-center px-6 py-4 rounded-xl border border-[#1a237e] text-[#1a237e] font-bold text-lg shadow hover:bg-[#1a237e]/10 transition-colors duration-200"
+                className="inline-flex items-center justify-center px-6 py-4 rounded-xl border border-[#2ecc71] text-[#1a237e] font-bold text-md shadow hover:bg-[#2ecc71]/10 transition-colors duration-200"
               >
-                <Wallet className="w-5 h-5 mr-2" />
-                {generateKeypair.isPending ? 'Generating...' : 'New Keypair'}
+                <Wallet className="w-8 h-8 mr-2 text-bold" />
+                {generateKeypair.isPending ? 'Generating...' : ' Generate New Secret Key'}
               </button>
             </div>
           </div>
