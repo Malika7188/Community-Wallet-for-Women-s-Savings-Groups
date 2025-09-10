@@ -8,6 +8,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"chama-wallet-backend/services"
+	"chama-wallet-backend/config"
 )
 
 // ContributeHandler handles direct Soroban contributions
@@ -40,9 +41,18 @@ func ContributeHandler(c *fiber.Ctx) error {
 		})
 	}
 
-	fmt.Printf("🔄 Processing direct Soroban contribution: %s XLM from %s to contract %s\n",
-		body.Amount, body.UserAddress, body.ContractID)
+	// Validate amount limits for mainnet
+	if config.Config.IsMainnet {
+		minAmount := 0.0000001 // Minimum XLM amount
+		if amount < minAmount {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": fmt.Sprintf("Amount below minimum of %f XLM for mainnet", minAmount),
+			})
+		}
+	}
 
+	fmt.Printf("🔄 Processing direct Soroban contribution: %s XLM from %s to contract %s on %s\n",
+		body.Amount, body.UserAddress, body.ContractID, config.Config.Network)
 	args := []string{body.UserAddress, body.Amount}
 	var result string
 
@@ -60,7 +70,7 @@ func ContributeHandler(c *fiber.Ctx) error {
 		})
 	}
 
-	fmt.Printf("✅ Direct Soroban contribution successful: %s\n", result)
+	fmt.Printf("✅ Direct Soroban contribution successful on %s: %s\n", config.Config.Network, result)
 
 	return c.JSON(fiber.Map{
 		"message":     "Contribution successful",
@@ -68,6 +78,7 @@ func ContributeHandler(c *fiber.Ctx) error {
 		"user":        body.UserAddress,
 		"amount":      body.Amount,
 		"tx_hash":     result,
+		"network":     config.Config.Network,
 		"timestamp":   fmt.Sprintf("%d", time.Now().Unix()),
 	})
 }
@@ -101,6 +112,7 @@ func BalanceHandler(c *fiber.Ctx) error {
 		"contract_id": body.ContractID,
 		"user":        body.UserAddress,
 		"balance":     result,
+		"network":     config.Config.Network,
 	})
 }
 
@@ -132,6 +144,15 @@ func WithdrawHandler(c *fiber.Ctx) error {
 		})
 	}
 
+	// Additional validation for mainnet
+	if config.Config.IsMainnet {
+		minAmount := 0.0000001
+		if amount < minAmount {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": fmt.Sprintf("Amount below minimum of %f XLM for mainnet", minAmount),
+			})
+		}
+	}
 	args := []string{body.UserAddress, body.Amount}
 	result, err := services.CallSorobanFunctionWithAuth(body.ContractID, "withdraw", body.SecretKey, args)
 	if err != nil {
@@ -146,6 +167,7 @@ func WithdrawHandler(c *fiber.Ctx) error {
 		"user":        body.UserAddress,
 		"amount":      body.Amount,
 		"new_balance": result,
+		"network":     config.Config.Network,
 	})
 }
 
@@ -178,5 +200,6 @@ func HistoryHandler(c *fiber.Ctx) error {
 		"contract_id": body.ContractID,
 		"user":        body.UserAddress,
 		"history":     result,
+		"network":     config.Config.Network,
 	})
 }

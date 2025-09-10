@@ -8,6 +8,8 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	"chama-wallet-backend/config"
 )
 
 type SorobanInvokeRequest struct {
@@ -32,13 +34,14 @@ func validateContractID(contractID string) error {
 
 // checkContractExists verifies the contract exists on the network
 func checkContractExists(contractID string) error {
-	cmd := exec.Command("soroban", "contract", "inspect", "--id", contractID, "--network", "testnet")
+	network := config.GetSorobanNetwork()
+	cmd := exec.Command("soroban", "contract", "inspect", "--id", contractID, "--network", network)
 	
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("contract does not exist or is not accessible: %v, stderr: %s", err, stderr.String())
+		return fmt.Errorf("contract does not exist or is not accessible on %s: %v, stderr: %s", network, err, stderr.String())
 	}
 	return nil
 }
@@ -59,11 +62,14 @@ func CallSorobanFunction(contractID, functionName string, args []string) (string
 		return "", fmt.Errorf("contract validation failed: %w", err)
 	}
 
+	network := config.GetSorobanNetwork()
+	sourceAccount := getSourceAccount()
+
 	cmd := []string{
 		"contract", "invoke",
 		"--id", contractID,
-		"--network", "testnet",
-		"--source-account", "malika", // Use the configured source account
+		"--network", network,
+		"--source-account", sourceAccount,
 		"--",
 		functionName,
 	}
@@ -81,7 +87,7 @@ func CallSorobanFunction(contractID, functionName string, args []string) (string
 		cmd = append(cmd, args...)
 	}
 
-	fmt.Printf("🔧 Executing Soroban command: soroban %s\n", strings.Join(cmd, " "))
+	fmt.Printf("🔧 Executing Soroban command on %s: soroban %s\n", network, strings.Join(cmd, " "))
 	
 	// Execute the command with timeout
 	execCmd := exec.Command("soroban", cmd...)
@@ -105,17 +111,14 @@ func CallSorobanFunction(contractID, functionName string, args []string) (string
 			fmt.Printf("❌ Stdout: %s\n", out.String())
 			return "", fmt.Errorf("soroban invoke failed: %v, stderr: %s", err, stderr.String())
 		}
-	case <-time.After(30 * time.Second):
+	case <-time.After(60 * time.Second): // Increased timeout for mainnet
 		execCmd.Process.Kill()
-		return "", fmt.Errorf("soroban command timed out after 30 seconds")
+		return "", fmt.Errorf("soroban command timed out after 60 seconds")
 	}
 	
 	result := strings.TrimSpace(out.String())
-	fmt.Printf("✅ Soroban result: %s\n", result)
+	fmt.Printf("✅ Soroban result on %s: %s\n", network, result)
 	
-	// if err != nil {
-	// 	return "", fmt.Errorf("soroban error: %s", string(out))
-	// }
 
 	return result, nil
 }
@@ -171,12 +174,14 @@ func CallSorobanFunctionWithAuth(contractID, functionName, userSecretKey string,
 		}
 	}()
 
+	network := config.GetSorobanNetwork()
+
 	// Build command arguments
 	cmdArgs := []string{
 		"contract", "invoke",
 		"--id", contractID,
 		"--source-account", keyName,
-		"--network", "testnet",
+		"--network", network,
 		"--",
 		functionName,
 	}
@@ -194,7 +199,7 @@ func CallSorobanFunctionWithAuth(contractID, functionName, userSecretKey string,
 		cmdArgs = append(cmdArgs, args...)
 	}
 
-	fmt.Printf("🔧 Executing authenticated Soroban command: soroban %s\n", strings.Join(cmdArgs, " "))
+	fmt.Printf("🔧 Executing authenticated Soroban command on %s: soroban %s\n", network, strings.Join(cmdArgs, " "))
 	
 	// Execute the command with timeout
 	cmd := exec.Command("soroban", cmdArgs...)
@@ -218,45 +223,56 @@ func CallSorobanFunctionWithAuth(contractID, functionName, userSecretKey string,
 			fmt.Printf("❌ Stdout: %s\n", out.String())
 			return "", fmt.Errorf("soroban invoke failed: %v, stderr: %s", err, stderr.String())
 		}
-	case <-time.After(45 * time.Second):
+	case <-time.After(90 * time.Second): // Increased timeout for mainnet
 		cmd.Process.Kill()
-		return "", fmt.Errorf("soroban command timed out after 45 seconds")
+		return "", fmt.Errorf("soroban command timed out after 90 seconds")
 	}
 
 	result := strings.TrimSpace(out.String())
-	fmt.Printf("✅ Authenticated Soroban result: %s\n", result)
+	fmt.Printf("✅ Authenticated Soroban result on %s: %s\n", network, result)
 	
 	return result, nil
 }
 
+// getSourceAccount returns the appropriate source account based on network
+func getSourceAccount() string {
+	if config.Config.IsMainnet {
+		// For mainnet, use environment variable or configured account
+		if account := os.Getenv("SOROBAN_PUBLIC_KEY"); account != "" {
+			return account
+		}
+		return "mainnet-account" // This should be configured in soroban keys
+	}
+	return "malika" // Testnet account
+}
 // Wrapper functions with improved error handling
 func Contribute(contractID, userAddress, amount string) (string, error) {
-	fmt.Printf("🔄 Contributing %s XLM from %s to contract %s\n", amount, userAddress, contractID)
+	fmt.Printf("🔄 Contributing %s XLM from %s to contract %s on %s\n", amount, userAddress, contractID, config.Config.Network)
 	args := []string{userAddress, amount}
 	return CallSorobanFunction(contractID, "contribute", args)
 }
 
 func GetBalance(contractID, userAddress string) (string, error) {
-	fmt.Printf("🔍 Getting balance for %s from contract %s\n", userAddress, contractID)
+	fmt.Printf("🔍 Getting balance for %s from contract %s on %s\n", userAddress, contractID, config.Config.Network)
 	args := []string{userAddress}
 	return CallSorobanFunction(contractID, "get_balance", args)
 }
 
 func Withdraw(contractID, userAddress, amount string) (string, error) {
-	fmt.Printf("💸 Withdrawing %s XLM for %s from contract %s\n", amount, userAddress, contractID)
+	fmt.Printf("💸 Withdrawing %s XLM for %s from contract %s on %s\n", amount, userAddress, contractID, config.Config.Network)
 	args := []string{userAddress, amount}
 	return CallSorobanFunction(contractID, "withdraw", args)
 }
 
 func GetContributionHistory(contractID, userAddress string) (string, error) {
-	fmt.Printf("📊 Getting contribution history for %s from contract %s\n", userAddress, contractID)
+	fmt.Printf("📊 Getting contribution history for %s from contract %s on %s\n", userAddress, contractID, config.Config.Network)
 	args := []string{userAddress}
 	return CallSorobanFunction(contractID, "get_contribution_history", args)
 }
 
 // ContributeWithAuth - wrapper for authenticated contributions
 func ContributeWithAuth(contractID, userAddress, amount, secretKey string) (string, error) {
-	fmt.Printf("🔐 Making authenticated contribution: %s XLM from %s\n", amount, userAddress)
+	fmt.Printf("🔐 Making authenticated contribution: %s XLM from %s on %s\n", amount, userAddress, config.Config.Network)
 	args := []string{userAddress, amount}
 	return CallSorobanFunctionWithAuth(contractID, "contribute", secretKey, args)
 }

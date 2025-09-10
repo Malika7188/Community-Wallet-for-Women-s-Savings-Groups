@@ -3,22 +3,39 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
-	"github.com/stellar/go/keypair"
+	"github.com/joho/godotenv"
 	"gorm.io/gorm"
 
+	"chama-wallet-backend/config"
 	"chama-wallet-backend/database"
 	"chama-wallet-backend/routes"
-	"chama-wallet-backend/services"
 )
 
 var DB *gorm.DB
 
 func main() {
+	// Load environment variables
+	if err := godotenv.Load(); err != nil {
+		fmt.Printf("Warning: Error loading .env file: %v\n", err)
+	}
+
+	// Initialize Stellar configuration
+	config.InitStellarConfig()
+
+	// Validate mainnet configuration if needed
+	if err := config.ValidateMainnetConfig(); err != nil {
+		log.Fatalf("❌ Configuration validation failed: %v", err)
+	}
+
+	// Connect to database and run migrations
 	database.ConnectDB()
 	database.RunMigrations()
+
+	// Create Fiber app
 	app := fiber.New()
 
 	// Add CORS middleware
@@ -28,46 +45,33 @@ func main() {
 		AllowHeaders:     "Origin,Content-Type,Accept,Authorization",
 		AllowCredentials: true,
 	}))
+
+	// Setup routes
 	routes.Setup(app)
 	routes.SetupSorobanRoutes(app)
 	routes.GroupRoutes(app)
 	routes.AuthRoutes(app)
 
-	fmt.Println("🚀 Server starting on localhost:3000")
-	log.Fatal(app.Listen("localhost:3000"))
-
-	kp1, err := keypair.Random()
-	if err != nil {
-		log.Fatalf("Failed to generate keypair1: %v", err)
-	}
-	kp2, err := keypair.Random()
-	if err != nil {
-		log.Fatalf("Failed to generate keypair2: %v", err)
+	// Get port from environment or use default
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "3000"
 	}
 
-	addr1 := kp1.Address()
-	addr2 := kp2.Address()
-
-	fmt.Println("Account 1:", kp1.Address())
-	fmt.Println("Seed 1:", kp1.Seed())
-	fmt.Println("Account 2:", kp2.Address())
-	fmt.Println("Seed 2:", kp2.Seed())
-
-	fmt.Println("From:", addr1)
-	fmt.Println("To:", addr2)
-
-	// 🚀 Fund both accounts using Friendbot
-	if err := services.FundTestAccount(addr1); err != nil {
-		log.Fatalf("Funding account 1 failed: %v", err)
+	// Print startup information
+	fmt.Printf("🚀 Chama Wallet API starting on port %s\n", port)
+	fmt.Printf("🌐 Network: %s\n", config.Config.Network)
+	fmt.Printf("🔗 Horizon: %s\n", config.Config.HorizonURL)
+	fmt.Printf("📡 Soroban RPC: %s\n", config.Config.SorobanRPCURL)
+	if config.Config.ContractID != "" {
+		fmt.Printf("📋 Contract ID: %s\n", config.Config.ContractID)
 	}
-	if err := services.FundTestAccount(addr2); err != nil {
-		log.Fatalf("Funding account 2 failed: %v", err)
-	}
-
-	// 🪙 Send XLM from kp1 to kp2
-	if _, err := services.SendXLM(kp1.Seed(), addr2, "10"); err != nil {
-		log.Fatalf("Transaction failed: %v", err)
+	
+	if config.Config.IsMainnet {
+		fmt.Println("⚠️  MAINNET MODE: Real funds will be used!")
 	} else {
-		fmt.Println("✅ Transaction sent successfully.")
+		fmt.Println("🧪 TESTNET MODE: Using test funds")
 	}
+
+	log.Fatal(app.Listen(fmt.Sprintf(":%s", port)))
 }

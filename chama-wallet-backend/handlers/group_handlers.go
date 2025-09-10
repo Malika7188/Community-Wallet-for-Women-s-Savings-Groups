@@ -12,6 +12,7 @@ import (
 	"chama-wallet-backend/database"
 	"chama-wallet-backend/models"
 	"chama-wallet-backend/services"
+	"chama-wallet-backend/config"
 )
 
 func ContributeToGroup(c *fiber.Ctx) error {
@@ -36,6 +37,22 @@ func ContributeToGroup(c *fiber.Ctx) error {
 		})
 	}
 
+	// Validate amount limits for mainnet
+	if config.Config.IsMainnet {
+		amount, err := strconv.ParseFloat(payload.Amount, 64)
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": "Invalid amount format",
+			})
+		}
+		
+		minAmount := 0.0000001 // Minimum XLM amount
+		if amount < minAmount {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": fmt.Sprintf("Amount below minimum of %f XLM", minAmount),
+			})
+		}
+	}
 	// Verify user is a member of the group
 	var member models.Member
 	if err := database.DB.Where("group_id = ? AND user_id = ? AND status = ?",
@@ -73,8 +90,8 @@ func ContributeToGroup(c *fiber.Ctx) error {
 		})
 	}
 
-	fmt.Printf("🔄 Processing contribution: %s XLM from %s to group %s (contract: %s)\n", 
-		payload.Amount, payload.From, group.Name, group.ContractID)
+	fmt.Printf("🔄 Processing contribution: %s XLM from %s to group %s (contract: %s) on %s\n", 
+		payload.Amount, payload.From, group.Name, group.ContractID, config.Config.Network)
 
 	// Make authenticated Soroban contract call
 	output, err := services.ContributeWithAuth(group.ContractID, payload.From, payload.Amount, payload.Secret)
@@ -102,7 +119,7 @@ func ContributeToGroup(c *fiber.Ctx) error {
 		// Don't fail the request since blockchain transaction succeeded
 	}
 
-	fmt.Printf("✅ Contribution successful: %s\n", output)
+	fmt.Printf("✅ Contribution successful on %s: %s\n", config.Config.Network, output)
 
 	return c.JSON(fiber.Map{
 		"message":      "Contribution successful",
@@ -112,6 +129,7 @@ func ContributeToGroup(c *fiber.Ctx) error {
 		"to":           group.Wallet,
 		"amount":       payload.Amount,
 		"tx_hash":      output,
+		"network":      config.Config.Network,
 		"contribution": contribution,
 	})
 }

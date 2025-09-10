@@ -11,6 +11,7 @@ import (
 	"chama-wallet-backend/database"
 	"chama-wallet-backend/models"
 	"chama-wallet-backend/services"
+	"chama-wallet-backend/config"
 )
 
 type CreateGroupRequest struct {
@@ -38,25 +39,39 @@ func CreateGroup(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to generate wallet"})
 	}
 
-	fmt.Printf("✅ Generated group wallet: %s\n", wallet.PublicKey)
+	fmt.Printf("✅ Generated group wallet: %s on %s\n", wallet.PublicKey, config.Config.Network)
 
-	// Remove the funding section - comment out or delete these lines:
-	// err = services.FundTestAccount(wallet.PublicKey)
-	// if err != nil {
-	//     fmt.Printf("⚠️ Warning: Failed to fund group wallet: %v\n", err)
-	//     // Don't fail the group creation, just log the warning
-	// } else {
-	//     fmt.Printf("✅ Group wallet funded successfully\n")
-	// }
-
-	// Deploy contract
-	contractID, err := services.DeployChamaContract()
-	if err != nil {
-		fmt.Printf("❌ Failed to deploy contract: %v\n", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to deploy contract"})
+	// Fund wallet only on testnet
+	if !config.Config.IsMainnet {
+		err = services.FundTestAccount(wallet.PublicKey)
+		if err != nil {
+			fmt.Printf("⚠️ Warning: Failed to fund group wallet: %v\n", err)
+			// Don't fail the group creation, just log the warning
+		} else {
+			fmt.Printf("✅ Group wallet funded successfully on testnet\n")
+		}
 	}
 
-	// ✅ Step 2: Save group in DB with the new contractID
+	// Get contract ID from configuration
+	contractID := config.Config.ContractID
+	if contractID == "" {
+		if config.Config.IsMainnet {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "Mainnet contract ID not configured. Please set SOROBAN_CONTRACT_ID in environment.",
+			})
+		} else {
+			// Deploy contract for testnet
+			contractID, err = services.DeployChamaContract()
+			if err != nil {
+				fmt.Printf("❌ Failed to deploy contract: %v\n", err)
+				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to deploy contract"})
+			}
+		}
+	}
+
+	fmt.Printf("✅ Using contract ID: %s on %s\n", contractID, config.Config.Network)
+
+	// Save group in DB with the contract ID
 	group := models.Group{
 		ID:          uuid.NewString(),
 		Name:        payload.Name,
@@ -65,7 +80,7 @@ func CreateGroup(c *fiber.Ctx) error {
 		CreatorID:   user.ID,
 		ContractID:  contractID,
 		Status:      "pending",
-		SecretKey:   wallet.SecretKey, // Add this field to store secret
+		SecretKey:   wallet.SecretKey,
 	}
 
 	if err := database.DB.Create(&group).Error; err != nil {
@@ -99,6 +114,7 @@ func CreateGroup(c *fiber.Ctx) error {
 			"secret_key":  group.SecretKey,
 			"status":      group.Status,
 			"contract_id": contractID,
+			"network":     config.Config.Network,
 		},
 	})
 }

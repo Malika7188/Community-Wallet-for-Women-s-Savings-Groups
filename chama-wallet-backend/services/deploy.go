@@ -8,39 +8,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/joho/godotenv"
+	"chama-wallet-backend/config"
 )
 
-func init() {
-	// Load .env file and handle potential errors
-	if err := godotenv.Load(".env"); err != nil {
-		fmt.Printf("Warning: Error loading .env file: %v\n", err)
-	}
-
-	// Print all relevant environment variables for debugging (but not the full secret key)
-	fmt.Println("Environment Variables:")
-	fmt.Printf("Public Key: %s\n", os.Getenv("SOROBAN_PUBLIC_KEY"))
-
-	secretKey := os.Getenv("SOROBAN_SECRET_KEY")
-	if len(secretKey) > 4 {
-		fmt.Printf("Secret Key (first 4 chars): %s...\n", secretKey[:4])
-	}
-
-	fmt.Printf("Network: %s\n", os.Getenv("SOROBAN_NETWORK"))
-	fmt.Printf("Contract ID: %s\n", os.Getenv("SOROBAN_CONTRACT_ID"))
-
-	// Check if soroban CLI is available
-	if _, err := exec.LookPath("soroban"); err != nil {
-		fmt.Printf("Warning: soroban CLI not found in PATH: %v\n", err)
-	} else {
-		// Get soroban version
-		if out, err := exec.Command("soroban", "--version").Output(); err == nil {
-			fmt.Printf("Soroban CLI version: %s\n", string(out))
-		}
-	}
-}
 
 func DeployChamaContract() (string, error) {
+	if config.Config.IsMainnet {
+		return "", fmt.Errorf("contract deployment should be done manually on mainnet for security. Use the configured SOROBAN_CONTRACT_ID instead")
+	}
+
 	// Load keys from environment
 	source := os.Getenv("SOROBAN_PUBLIC_KEY")
 	secret := os.Getenv("SOROBAN_SECRET_KEY")
@@ -64,18 +40,20 @@ func DeployChamaContract() (string, error) {
 		}
 	}
 
-	fmt.Printf("🔧 Deploying contract from WASM: %s\n", wasmPath)
+	fmt.Printf("🔧 Deploying contract from WASM: %s on %s\n", wasmPath, config.Config.Network)
 	fmt.Printf("🔧 Using source account: %s\n", source)
+
+	network := config.GetSorobanNetwork()
 
 	// Deploy using source account name (should be configured in soroban keys)
 	cmd := exec.Command("soroban",
 		"contract", "deploy",
 		"--wasm", wasmPath,
 		"--source-account", source,
-		"--network", "testnet",
+		"--network", network,
 	)
 
-	fmt.Println("🚀 Running deployment command...")
+	fmt.Printf("🚀 Running deployment command on %s...\n", network)
 
 	// Capture stdout and stderr
 	var out bytes.Buffer
@@ -95,7 +73,7 @@ func DeployChamaContract() (string, error) {
 	}
 
 	output := strings.TrimSpace(out.String())
-	fmt.Printf("✅ Contract deployed successfully. Output: %s\n", output)
+	fmt.Printf("✅ Contract deployed successfully on %s. Output: %s\n", network, output)
 
 	// Extract contract address from output (usually the last line)
 	lines := strings.Split(output, "\n")
@@ -106,13 +84,13 @@ func DeployChamaContract() (string, error) {
 		return "", fmt.Errorf("invalid contract address format: %s", contractAddress)
 	}
 
-	fmt.Printf("✅ Contract deployed at address: %s\n", contractAddress)
+	fmt.Printf("✅ Contract deployed at address: %s on %s\n", contractAddress, network)
 	return contractAddress, nil
 }
 
 // deployWithKeyStorage: Alternative deployment method using temporary key storage
 func deployWithKeyStorage(source, secret string) (string, error) {
-	fmt.Println("🔄 Trying alternative deployment method with key storage...")
+	fmt.Printf("🔄 Trying alternative deployment method with key storage on %s...\n", config.Config.Network)
 
 	keyName := fmt.Sprintf("temp-deploy-key-%d", time.Now().Unix())
 
@@ -145,11 +123,13 @@ func deployWithKeyStorage(source, secret string) (string, error) {
 		wasmPath = "./chama_savings.wasm"
 	}
 
+	network := config.GetSorobanNetwork()
+
 	deployCmd := exec.Command("soroban",
 		"contract", "deploy",
 		"--wasm", wasmPath,
 		"--source-account", keyName,
-		"--network", "testnet",
+		"--network", network,
 	)
 
 	var out bytes.Buffer
@@ -163,7 +143,7 @@ func deployWithKeyStorage(source, secret string) (string, error) {
 	}
 
 	output := strings.TrimSpace(out.String())
-	fmt.Printf("✅ Contract deployed with key storage. Output: %s\n", output)
+	fmt.Printf("✅ Contract deployed with key storage on %s. Output: %s\n", network, output)
 
 	// Extract contract address from output
 	lines := strings.Split(output, "\n")
@@ -205,12 +185,14 @@ func InvokeContract(contractAddress, method string, args []string) (string, erro
 		cleanupCmd.Run()
 	}()
 
+	network := config.GetSorobanNetwork()
+
 	// Build invoke command
 	cmdArgs := []string{
 		"contract", "invoke",
 		"--id", contractAddress,
 		"--source-account", keyName,
-		"--network", "testnet",
+		"--network", network,
 		"--", method,
 	}
 

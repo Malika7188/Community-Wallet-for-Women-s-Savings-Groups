@@ -3,10 +3,10 @@ package services
 import (
 	"fmt"
 
-	"github.com/stellar/go/clients/horizonclient"
 	"github.com/stellar/go/keypair"
-	"github.com/stellar/go/network"
 	"github.com/stellar/go/txnbuild"
+
+	"chama-wallet-backend/config"
 )
 
 func SendPayment(fromSecret, toAddress, amount string) error {
@@ -15,8 +15,8 @@ func SendPayment(fromSecret, toAddress, amount string) error {
 		return fmt.Errorf("invalid secret key: %w", err)
 	}
 
-	client := horizonclient.DefaultTestNetClient
-	ar := horizonclient.AccountRequest{AccountID: senderKP.Address()}
+	client := config.GetHorizonClient()
+	ar := config.horizonclient.AccountRequest{AccountID: senderKP.Address()}
 	sourceAccount, err := client.AccountDetail(ar)
 	if err != nil {
 		return fmt.Errorf("could not load source account: %w", err)
@@ -27,10 +27,18 @@ func SendPayment(fromSecret, toAddress, amount string) error {
 		Amount:      amount,
 		Asset:       txnbuild.NativeAsset{},
 	}
+
+	// Add memo for mainnet compliance
+	var memo txnbuild.Memo
+	if config.Config.IsMainnet {
+		memo = txnbuild.MemoText("Chama Wallet Payment")
+	}
+
 	txParams := txnbuild.TransactionParams{
 		SourceAccount: &sourceAccount,
 		Operations:    []txnbuild.Operation{&op},
 		BaseFee:       txnbuild.MinBaseFee,
+		Memo:          memo,
 		Preconditions: txnbuild.Preconditions{
 			TimeBounds: txnbuild.NewInfiniteTimeout(), // ✅ This returns *Timebounds
 		},
@@ -42,7 +50,7 @@ func SendPayment(fromSecret, toAddress, amount string) error {
 		return fmt.Errorf("cannot build tx: %w", err)
 	}
 
-	tx, err = tx.Sign(network.TestNetworkPassphrase, senderKP)
+	tx, err = tx.Sign(config.GetNetworkPassphrase(), senderKP)
 	if err != nil {
 		return fmt.Errorf("cannot sign tx: %w", err)
 	}
@@ -52,5 +60,6 @@ func SendPayment(fromSecret, toAddress, amount string) error {
 		return fmt.Errorf("tx failed: %w", err)
 	}
 
+	fmt.Printf("✅ Payment sent on %s network\n", config.Config.Network)
 	return nil
 }
