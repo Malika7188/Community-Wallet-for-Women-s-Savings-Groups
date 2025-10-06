@@ -40,7 +40,7 @@ func main() {
 
 	// Add CORS middleware
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     "http://localhost:5173, http://127.0.0.1:5173, https://community-wallet-for-women-s-saving-ten.vercel.app/",
+		AllowOrigins:     "http://localhost:5173,https://community-wallet-for-women-s-savings-6wpp.onrender.com,http://127.0.0.1:5173,https://community-wallet-for-women-s-saving-ten.vercel.app",
 		AllowMethods:     "GET,POST,PUT,DELETE,OPTIONS",
 		AllowHeaders:     "Origin,Content-Type,Accept,Authorization",
 		AllowCredentials: true,
