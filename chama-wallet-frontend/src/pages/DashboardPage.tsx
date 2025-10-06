@@ -24,11 +24,11 @@ const DashboardPage = () => {
     })
   }
 
-  const getTransactionIcon = (hash: string) => {
+  const getTransactionIcon = () => {
     return Math.random() > 0.5 ? ArrowUpRight : ArrowDownRight
   }
 
-  const getTransactionColor = (hash: string) => {
+  const getTransactionColor = () => {
     return Math.random() > 0.5 ? 'text-green-600' : 'text-red-600'
   }
 
@@ -127,8 +127,8 @@ const DashboardPage = () => {
           ) : (
             <div className="space-y-3">
               {transactions?.data?.transactions?.slice(0, 2).map((tx) => { // Limit to 2 transactions
-                const Icon = getTransactionIcon(tx.hash)
-                const colorClass = getTransactionColor(tx.hash)
+                const Icon = getTransactionIcon()
+                const colorClass = getTransactionColor()
 
                 return (
                   <div
