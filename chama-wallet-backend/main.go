@@ -40,7 +40,7 @@ func main() {
 
 	// Add CORS middleware
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     "http://localhost:5173",
+		AllowOrigins:     "http://localhost:5173, http://127.0.0.1:5173",
 		AllowMethods:     "GET,POST,PUT,DELETE,OPTIONS",
 		AllowHeaders:     "Origin,Content-Type,Accept,Authorization",
 		AllowCredentials: true,
@@ -66,7 +66,7 @@ func main() {
 	if config.Config.ContractID != "" {
 		fmt.Printf("📋 Contract ID: %s\n", config.Config.ContractID)
 	}
-	
+
 	if config.Config.IsMainnet {
 		fmt.Println("⚠️  MAINNET MODE: Real funds will be used!")
 	} else {
