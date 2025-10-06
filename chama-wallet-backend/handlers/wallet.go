@@ -2,19 +2,19 @@ package handlers
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/gofiber/fiber/v2"
+	"github.com/stellar/go/clients/horizonclient"
 	"github.com/stellar/go/keypair"
 	"github.com/stellar/go/txnbuild"
 
-	"github.com/gofiber/fiber/v2"
-	"github.com/stellar/go/clients/horizonclient"
 	"chama-wallet-backend/config"
 	"chama-wallet-backend/services"
 )
-
 
 // wallet handlers
 // Creates and returns a wallet
@@ -31,13 +31,13 @@ func GetBalance(c *fiber.Ctx) error {
 	address := c.Params("address")
 
 	client := config.GetHorizonClient()
-	accountRequest := config.horizonclient.AccountRequest{AccountID: address}
+	accountRequest := horizonclient.AccountRequest{AccountID: address}
 	account, err := client.AccountDetail(accountRequest)
 	if err != nil {
 		// For mainnet, provide more helpful error messages
 		if config.Config.IsMainnet {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-				"error": "Account not found on mainnet. Please ensure the account is funded with real XLM first.",
+				"error":   "Account not found on mainnet. Please ensure the account is funded with real XLM first.",
 				"network": config.Config.Network,
 			})
 		}
@@ -57,7 +57,7 @@ func GetBalance(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{
 		"balances": balances,
-		"network": config.Config.Network,
+		"network":  config.Config.Network,
 	})
 }
 
@@ -94,13 +94,13 @@ func TransferFunds(c *fiber.Ctx) error {
 		amount, _ := strconv.ParseFloat(req.Amount, 64)
 		minAmount, _ := strconv.ParseFloat(os.Getenv("MIN_TRANSFER_AMOUNT"), 64)
 		maxAmount, _ := strconv.ParseFloat(os.Getenv("MAX_TRANSFER_AMOUNT"), 64)
-		
+
 		if minAmount > 0 && amount < minAmount {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 				"error": fmt.Sprintf("Amount below minimum transfer limit of %f", minAmount),
 			})
 		}
-		
+
 		if maxAmount > 0 && amount > maxAmount {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 				"error": fmt.Sprintf("Amount exceeds maximum transfer limit of %f", maxAmount),
@@ -128,29 +128,29 @@ func TransferFunds(c *fiber.Ctx) error {
 	}
 
 	client := config.GetHorizonClient()
-	ar := config.horizonclient.AccountRequest{AccountID: sourceKP.Address()}
+	ar := horizonclient.AccountRequest{AccountID: sourceKP.Address()}
 	sourceAccount, err := client.AccountDetail(ar)
 	if err != nil {
 		fmt.Printf("❌ Cannot load source account: %v\n", err)
-		
+
 		// Check if account doesn't exist and try to fund it
-		if horizonError, ok := err.(*config.horizonclient.Error); ok && horizonError.Problem.Status == 404 {
+		if horizonError, ok := err.(*horizonclient.Error); ok && horizonError.Problem.Status == 404 {
 			if config.Config.IsMainnet {
 				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 					"error": "Source account not found on mainnet. Please fund the account with real XLM first.",
 				})
 			}
-			
+
 			fmt.Printf("🔄 Source account not found, attempting to fund: %s\n", sourceKP.Address())
 			if fundErr := services.FundTestAccount(sourceKP.Address()); fundErr != nil {
 				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 					"error": "Source account not found and funding failed",
 				})
 			}
-			
+
 			// Wait for funding to process
 			time.Sleep(3 * time.Second)
-			
+
 			// Try to load account again
 			sourceAccount, err = client.AccountDetail(ar)
 			if err != nil {
@@ -166,10 +166,10 @@ func TransferFunds(c *fiber.Ctx) error {
 	}
 
 	// Check if destination account exists, if not try to create it
-	destAccountRequest := config.horizonclient.AccountRequest{AccountID: req.ToAddress}
+	destAccountRequest := horizonclient.AccountRequest{AccountID: req.ToAddress}
 	_, err = client.AccountDetail(destAccountRequest)
 	if err != nil {
-		if horizonError, ok := err.(*config.horizonclient.Error); ok && horizonError.Problem.Status == 404 {
+		if horizonError, ok := err.(*horizonclient.Error); ok && horizonError.Problem.Status == 404 {
 			if config.Config.IsMainnet {
 				fmt.Printf("⚠️ Destination account not found on mainnet: %s\n", req.ToAddress)
 				// On mainnet, we can still send to non-existent accounts (they'll be created)
@@ -249,13 +249,13 @@ func TransferFunds(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message":          "Transfer completed successfully",
 		"transaction_hash": resp.Hash,
-		"from":            sourceKP.Address(),
-		"to":              req.ToAddress,
-		"amount":          req.Amount,
-		"asset_type":      assetType,
-		"network":         config.Config.Network,
-		"ledger":          resp.Ledger,
-		"explorer_url":    getExplorerURL(resp.Hash),
+		"from":             sourceKP.Address(),
+		"to":               req.ToAddress,
+		"amount":           req.Amount,
+		"asset_type":       assetType,
+		"network":          config.Config.Network,
+		"ledger":           resp.Ledger,
+		"explorer_url":     getExplorerURL(resp.Hash),
 	})
 }
 
@@ -281,7 +281,7 @@ func FundAccount(c *fiber.Ctx) error {
 
 	if config.Config.IsMainnet {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Account funding not available on mainnet. Please deposit real XLM to fund your account.",
+			"error":   "Account funding not available on mainnet. Please deposit real XLM to fund your account.",
 			"network": config.Config.Network,
 		})
 	}
@@ -305,10 +305,10 @@ func GetTransactionHistory(c *fiber.Ctx) error {
 	}
 
 	client := config.GetHorizonClient()
-	txRequest := config.horizonclient.TransactionRequest{
+	txRequest := horizonclient.TransactionRequest{
 		ForAccount: address,
 		Limit:      10,
-		Order:      config.horizonclient.OrderDesc,
+		Order:      horizonclient.OrderDesc,
 	}
 
 	txPage, err := client.Transactions(txRequest)
@@ -319,19 +319,19 @@ func GetTransactionHistory(c *fiber.Ctx) error {
 	var txs []fiber.Map
 	for _, tx := range txPage.Embedded.Records {
 		txs = append(txs, fiber.Map{
-			"hash":        tx.Hash,
-			"ledger":      tx.Ledger,
-			"memo":        tx.Memo,
-			"successful":  tx.Successful,
-			"created_at":  tx.LedgerCloseTime.Format("2006-01-02 15:04:05"),
-			"fee_charged": tx.FeeCharged,
+			"hash":         tx.Hash,
+			"ledger":       tx.Ledger,
+			"memo":         tx.Memo,
+			"successful":   tx.Successful,
+			"created_at":   tx.LedgerCloseTime.Format("2006-01-02 15:04:05"),
+			"fee_charged":  tx.FeeCharged,
 			"explorer_url": getExplorerURL(tx.Hash),
 		})
 	}
 
 	return c.JSON(fiber.Map{
 		"transactions": txs,
-		"network": config.Config.Network,
+		"network":      config.Config.Network,
 	})
 }
 

@@ -29,7 +29,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
   return (
     <aside className={`fixed top-0 left-0 h-screen bg-[#1a237e] flex flex-col py-8 px-4 shadow-lg z-40 transition-width duration-300 ${isCollapsed ? 'w-20' : 'w-64'}`}>
       <div className="mb-10 flex items-center justify-between">
-  {!isCollapsed && <span className="text-2xl font-bold text-white tracking-wide">Umoja Wallet</span>}
+  {!isCollapsed && <span className="text-2xl font-bold text-white tracking-wide">Millicent Wallet</span>}
         <button onClick={toggleSidebar} className="text-white hover:text-[#2ecc71]">
           <Bars3Icon className="h-8 w-8" />
         </button>
