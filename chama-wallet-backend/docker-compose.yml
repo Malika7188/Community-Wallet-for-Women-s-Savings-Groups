@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: chama_wallet
+      POSTGRES_USER: chama_user
+      POSTGRES_PASSWORD: chama_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: ./chama-wallet-backend
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: chama_user
+      DB_PASSWORD: chama_password
+      DB_NAME: chama_wallet
+      # Add other env vars as needed
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+
+volumes:
+  db_data:
