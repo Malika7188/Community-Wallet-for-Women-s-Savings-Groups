@@ -17,13 +17,13 @@ const TransactionsPage = () => {
     })
   }
 
-  const getTransactionIcon = (hash: string) => {
+  const getTransactionIcon = () => {
     // This is a simplified way to determine transaction type
     // In a real app, you'd analyze the transaction operations
     return Math.random() > 0.5 ? ArrowUpRight : ArrowDownRight
   }
 
-  const getTransactionColor = (hash: string) => {
+  const getTransactionColor = () => {
     return Math.random() > 0.5 ? 'text-green-600' : 'text-red-600'
   }
 
@@ -62,8 +62,8 @@ const TransactionsPage = () => {
 
             <div className="space-y-3">
               {transactions?.data?.transactions?.map((tx) => {
-                const Icon = getTransactionIcon(tx.hash)
-                const colorClass = getTransactionColor(tx.hash)
+                const Icon = getTransactionIcon()
+                const colorClass = getTransactionColor()
                 
                 return (
                   <div
