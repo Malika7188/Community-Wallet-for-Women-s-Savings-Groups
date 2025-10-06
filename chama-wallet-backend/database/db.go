@@ -4,7 +4,7 @@ package database
 import (
 	"fmt"
 	"log"
-	// "your_project_name/smodels" // replace with your actual module
+	"os"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -15,7 +15,11 @@ import (
 var DB *gorm.DB
 
 func ConnectDB() {
-	dsn := "host=localhost user=chama_user password=malika dbname=chama_wallet port=5432 sslmode=disable"
+
+	dsn := os.Getenv("DATABASE_URL")
+	if dsn == "" {
+		dsn = "host=localhost user=chama_user password=malika dbname=chama_wallet port=5432 sslmode=disable"
+	}
 
 	var err error
 	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
