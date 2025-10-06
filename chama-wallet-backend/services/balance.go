@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/stellar/go/clients/horizonclient"
+
 	"chama-wallet-backend/config"
 )
 
@@ -11,10 +13,10 @@ func CheckBalance(address string) (string, error) {
 	client := config.GetHorizonClient()
 
 	// First try to get account details
-	account, err := client.AccountDetail(config.horizonclient.AccountRequest{AccountID: address})
+	account, err := client.AccountDetail(horizonclient.AccountRequest{AccountID: address})
 	if err != nil {
 		// Check if it's a "Resource Missing" error (account doesn't exist)
-		if horizonError, ok := err.(*config.horizonclient.Error); ok {
+		if horizonError, ok := err.(*horizonclient.Error); ok {
 			if horizonError.Problem.Status == 404 {
 				if config.Config.IsMainnet {
 					return "0", fmt.Errorf("account not found on mainnet - account needs to be funded with real XLM first")
@@ -31,7 +33,7 @@ func CheckBalance(address string) (string, error) {
 				time.Sleep(2 * time.Second)
 
 				// Try again to get account details
-				account, err = client.AccountDetail(config.horizonclient.AccountRequest{AccountID: address})
+				account, err = client.AccountDetail(horizonclient.AccountRequest{AccountID: address})
 				if err != nil {
 					return "0", fmt.Errorf("account still not found after funding: %w", err)
 				}
@@ -52,7 +54,7 @@ func CheckBalance(address string) (string, error) {
 			assetInfo = fmt.Sprintf("%s:%s", b.Asset.Code, b.Asset.Issuer)
 		}
 		fmt.Printf(" - Asset: %s | Balance: %s\n", assetInfo, b.Balance)
-		
+
 		if b.Asset.Type == "native" {
 			totalBalance = b.Balance
 		}
@@ -68,15 +70,15 @@ func CheckUSDCBalance(address string) (string, error) {
 	}
 
 	client := config.GetHorizonClient()
-	account, err := client.AccountDetail(config.horizonclient.AccountRequest{AccountID: address})
+	account, err := client.AccountDetail(horizonclient.AccountRequest{AccountID: address})
 	if err != nil {
 		return "0", fmt.Errorf("failed to get account details: %w", err)
 	}
 
 	for _, b := range account.Balances {
-		if b.Asset.Type != "native" && 
-		   b.Asset.Code == config.Config.USDCAssetCode && 
-		   b.Asset.Issuer == config.Config.USDCAssetIssuer {
+		if b.Asset.Type != "native" &&
+			b.Asset.Code == config.Config.USDCAssetCode &&
+			b.Asset.Issuer == config.Config.USDCAssetIssuer {
 			return b.Balance, nil
 		}
 	}
