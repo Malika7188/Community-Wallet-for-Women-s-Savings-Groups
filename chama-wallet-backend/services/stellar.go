@@ -9,7 +9,6 @@ import (
 
 	"github.com/stellar/go/clients/horizonclient"
 	"github.com/stellar/go/keypair"
-	"github.com/stellar/go/network"
 	"github.com/stellar/go/protocols/horizon"
 	"github.com/stellar/go/txnbuild"
 
@@ -46,7 +45,6 @@ func FundWallet(address string) error {
 	fmt.Printf("Friendbot response for %s: %s\n", address, string(body))
 	return nil
 }
-
 
 // SendXLM transfers XLM from sender to receiver
 func SendXLM(seed, destination, amount string) (horizon.Transaction, error) {
