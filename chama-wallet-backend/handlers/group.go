@@ -49,11 +49,14 @@ func CreateGroup(c *fiber.Ctx) error {
 	//     fmt.Printf("✅ Group wallet funded successfully\n")
 	// }
 
-	// Deploy contract
+	// Deploy contract (non-blocking - don't fail group creation if contract deployment fails)
 	contractID, err := services.DeployChamaContract()
 	if err != nil {
-		fmt.Printf("❌ Failed to deploy contract: %v\n", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to deploy contract"})
+		fmt.Printf("⚠️ Warning: Failed to deploy contract: %v\n", err)
+		contractID = "" // Set empty contract ID, can be updated later
+		// Don't fail the group creation - contract can be deployed later
+	} else {
+		fmt.Printf("✅ Contract deployed successfully: %s\n", contractID)
 	}
 
 	// ✅ Step 2: Save group in DB with the new contractID
