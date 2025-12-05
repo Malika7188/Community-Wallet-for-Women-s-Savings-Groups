@@ -61,7 +61,7 @@ const Navbar = () => {
               <>
                 <div className="hidden md:flex items-center space-x-3">
                   <span className="text-sm text-gray-700">Welcome, {user.name}</span>
-                  <NotificationCenter />
+                  <NotificationCenter isCollapsed={false} />
                   <button
                     onClick={handleLogout}
                     className="flex items-center space-x-1 text-gray-600 hover:text-gray-900 transition-colors"

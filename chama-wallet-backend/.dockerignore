@@ -1,0 +1,49 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+main
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Dependency directories
+vendor/
+
+# Go workspace file
+go.work
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Scripts (optional, uncomment if you don't want to include them)
+# *.sh
+
+# Soroban contract build artifacts (exclude everything except the WASM file)
+chama_savings/target/debug/
+chama_savings/target/release/
+chama_savings/target/wasm32-unknown-unknown/debug/
+chama_savings/target/.rustc_info.json
+chama_savings/target/CACHEDIR.TAG
+
+# Git
+.git/
+.gitignore

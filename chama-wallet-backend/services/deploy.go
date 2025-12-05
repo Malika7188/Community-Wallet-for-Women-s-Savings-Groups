@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"time"
 
 	"github.com/joho/godotenv"
 )
@@ -41,17 +40,42 @@ func init() {
 }
 
 func DeployChamaContract() (string, error) {
-	// Load keys from environment
-	source := os.Getenv("SOROBAN_PUBLIC_KEY")
+	// Load secret key from environment
 	secret := os.Getenv("SOROBAN_SECRET_KEY")
+	if secret == "" {
+		return "", fmt.Errorf("missing SOROBAN_SECRET_KEY in environment")
+	}
 
-	if source == "" || secret == "" {
-		// Fallback to default test account
-		source = "malika"
-		secret = os.Getenv("SOROBAN_SECRET_KEY")
-		if secret == "" {
-			return "", fmt.Errorf("missing SOROBAN_SECRET_KEY in environment")
-		}
+	// Get network configuration from environment
+	rpcURL := os.Getenv("SOROBAN_RPC_URL")
+	networkPassphrase := os.Getenv("SOROBAN_NETWORK_PASSPHRASE")
+
+	if rpcURL == "" {
+		rpcURL = "https://soroban-testnet.stellar.org:443"
+	}
+	if networkPassphrase == "" {
+		networkPassphrase = "Test SDF Network ; September 2015"
+	}
+
+	// First, ensure the account is funded
+	fmt.Println("💰 Checking account funding...")
+	fundCmd := exec.Command("soroban",
+		"keys", "fund", secret,
+		"--rpc-url", rpcURL,
+		"--network-passphrase", networkPassphrase,
+	)
+
+	var fundOut bytes.Buffer
+	var fundErr bytes.Buffer
+	fundCmd.Stdout = &fundOut
+	fundCmd.Stderr = &fundErr
+
+	if err := fundCmd.Run(); err != nil {
+		fmt.Printf("⚠️ Account funding warning: %v\n", err)
+		fmt.Printf("Fund stderr: %s\n", fundErr.String())
+		// Don't fail here - account might already be funded
+	} else {
+		fmt.Printf("✅ Account funded: %s\n", fundOut.String())
 	}
 
 	// Check if WASM file exists
@@ -65,14 +89,16 @@ func DeployChamaContract() (string, error) {
 	}
 
 	fmt.Printf("🔧 Deploying contract from WASM: %s\n", wasmPath)
-	fmt.Printf("🔧 Using source account: %s\n", source)
+	fmt.Printf("🌐 RPC URL: %s\n", rpcURL)
+	fmt.Printf("🌐 Network Passphrase: %s\n", networkPassphrase)
 
-	// Deploy using source account name (should be configured in soroban keys)
+	// Deploy using secret key directly via stdin
 	cmd := exec.Command("soroban",
 		"contract", "deploy",
 		"--wasm", wasmPath,
-		"--source-account", source,
-		"--network", "testnet",
+		"--source", secret,
+		"--rpc-url", rpcURL,
+		"--network-passphrase", networkPassphrase,
 	)
 
 	fmt.Println("🚀 Running deployment command...")
@@ -89,9 +115,7 @@ func DeployChamaContract() (string, error) {
 		fmt.Printf("❌ Deployment error: %v\n", execErr)
 		fmt.Printf("❗ stderr: %s\n", stderr.String())
 		fmt.Printf("❗ stdout: %s\n", out.String())
-
-		// Try alternative method with temporary key storage
-		return deployWithKeyStorage(source, secret)
+		return "", fmt.Errorf("contract deployment failed: %v", execErr)
 	}
 
 	output := strings.TrimSpace(out.String())
@@ -110,107 +134,35 @@ func DeployChamaContract() (string, error) {
 	return contractAddress, nil
 }
 
-// deployWithKeyStorage: Alternative deployment method using temporary key storage
-func deployWithKeyStorage(source, secret string) (string, error) {
-	fmt.Println("🔄 Trying alternative deployment method with key storage...")
-
-	keyName := fmt.Sprintf("temp-deploy-key-%d", time.Now().Unix())
-
-	// Step 1: Add key to soroban keys
-	addKeyCmd := exec.Command("soroban", "keys", "add", keyName, "--secret-key")
-	addKeyCmd.Stdin = strings.NewReader(secret)
-
-	var addKeyStderr bytes.Buffer
-	addKeyCmd.Stderr = &addKeyStderr
-
-	if err := addKeyCmd.Run(); err != nil {
-		fmt.Printf("❌ Failed to add key: %v, stderr: %s\n", err, addKeyStderr.String())
-		return "", fmt.Errorf("failed to add key: %v", err)
-	}
-
-	fmt.Printf("✅ Temporary key added: %s\n", keyName)
-
-	// Ensure cleanup
-	defer func() {
-		fmt.Printf("🧹 Cleaning up temporary key: %s\n", keyName)
-		cleanupCmd := exec.Command("soroban", "keys", "rm", keyName)
-		if err := cleanupCmd.Run(); err != nil {
-			fmt.Printf("⚠️ Warning: Failed to cleanup key: %v\n", err)
-		}
-	}()
-
-	// Step 2: Deploy using the stored key
-	wasmPath := "./chama_savings/target/wasm32-unknown-unknown/release/chama_savings.wasm"
-	if _, err := os.Stat(wasmPath); os.IsNotExist(err) {
-		wasmPath = "./chama_savings.wasm"
-	}
-
-	deployCmd := exec.Command("soroban",
-		"contract", "deploy",
-		"--wasm", wasmPath,
-		"--source-account", keyName,
-		"--network", "testnet",
-	)
-
-	var out bytes.Buffer
-	var stderr bytes.Buffer
-	deployCmd.Stdout = &out
-	deployCmd.Stderr = &stderr
-
-	if err := deployCmd.Run(); err != nil {
-		fmt.Printf("❌ Deploy with key storage failed: %v, stderr: %s\n", err, stderr.String())
-		return "", fmt.Errorf("deployment failed: %v", err)
-	}
-
-	output := strings.TrimSpace(out.String())
-	fmt.Printf("✅ Contract deployed with key storage. Output: %s\n", output)
-
-	// Extract contract address from output
-	lines := strings.Split(output, "\n")
-	contractAddress := strings.TrimSpace(lines[len(lines)-1])
-
-	// Validate contract address format
-	if len(contractAddress) != 56 || !strings.HasPrefix(contractAddress, "C") {
-		return "", fmt.Errorf("invalid contract address format: %s", contractAddress)
-	}
-
-	return contractAddress, nil
-}
-
 // Function to invoke contract methods
 func InvokeContract(contractAddress, method string, args []string) (string, error) {
 	if contractAddress == "" {
 		return "", fmt.Errorf("contract address is required")
 	}
 
-	source := os.Getenv("SOROBAN_PUBLIC_KEY")
 	secret := os.Getenv("SOROBAN_SECRET_KEY")
-
-	if source == "" || secret == "" {
-		return "", fmt.Errorf("missing SOROBAN_PUBLIC_KEY or SOROBAN_SECRET_KEY in environment")
+	if secret == "" {
+		return "", fmt.Errorf("missing SOROBAN_SECRET_KEY in environment")
 	}
 
-	keyName := "temp-invoke-key"
+	// Get network configuration from environment
+	rpcURL := os.Getenv("SOROBAN_RPC_URL")
+	networkPassphrase := os.Getenv("SOROBAN_NETWORK_PASSPHRASE")
 
-	// Add key temporarily
-	addKeyCmd := exec.Command("soroban", "keys", "add", keyName, "--secret-key")
-	addKeyCmd.Stdin = strings.NewReader(secret)
-
-	if err := addKeyCmd.Run(); err != nil {
-		return "", fmt.Errorf("failed to add key for invoke: %v", err)
+	if rpcURL == "" {
+		rpcURL = "https://soroban-testnet.stellar.org:443"
 	}
-
-	defer func() {
-		cleanupCmd := exec.Command("soroban", "keys", "rm", keyName)
-		cleanupCmd.Run()
-	}()
+	if networkPassphrase == "" {
+		networkPassphrase = "Test SDF Network ; September 2015"
+	}
 
 	// Build invoke command
 	cmdArgs := []string{
 		"contract", "invoke",
 		"--id", contractAddress,
-		"--source-account", keyName,
-		"--network", "testnet",
+		"--source", secret,
+		"--rpc-url", rpcURL,
+		"--network-passphrase", networkPassphrase,
 		"--", method,
 	}
 

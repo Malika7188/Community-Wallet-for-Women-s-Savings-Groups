@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useGroups, useGroupBalance } from '../hooks/useGroups'
@@ -34,8 +34,8 @@ const GroupDetailPage = () => {
     )
   }
 
-  const currentUserMember = group.Members?.find(m => m.UserID === user?.id)
-  const isAdmin = currentUserMember && ['creator', 'admin'].includes(currentUserMember.Role)
+  // const currentUserMember = group.Members?.find(m => m.UserID === user?.id)
+  // const _isAdmin = currentUserMember && ['creator', 'admin'].includes(currentUserMember.Role)
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Users },

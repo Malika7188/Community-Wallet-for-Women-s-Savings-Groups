@@ -24,11 +24,11 @@ const DashboardPage = () => {
     })
   }
 
-  const getTransactionIcon = (hash: string) => {
+  const getTransactionIcon = (_hash: string) => {
     return Math.random() > 0.5 ? ArrowUpRight : ArrowDownRight
   }
 
-  const getTransactionColor = (hash: string) => {
+  const getTransactionColor = (_hash: string) => {
     return Math.random() > 0.5 ? 'text-green-600' : 'text-red-600'
   }
 

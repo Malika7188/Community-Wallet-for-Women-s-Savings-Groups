@@ -3,9 +3,11 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/joho/godotenv"
 	"github.com/stellar/go/keypair"
 	"gorm.io/gorm"
 
@@ -17,13 +19,21 @@ import (
 var DB *gorm.DB
 
 func main() {
+	// Load .env file if it exists (for local development)
+	_ = godotenv.Load()
+
 	database.ConnectDB()
 	database.RunMigrations()
 	app := fiber.New()
 
 	// Add CORS middleware
+	allowedOrigins := os.Getenv("ALLOWED_ORIGINS")
+	if allowedOrigins == "" {
+		allowedOrigins = "http://localhost:5173"
+	}
+
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     "http://localhost:5173",
+		AllowOrigins:     allowedOrigins,
 		AllowMethods:     "GET,POST,PUT,DELETE,OPTIONS",
 		AllowHeaders:     "Origin,Content-Type,Accept,Authorization",
 		AllowCredentials: true,
@@ -33,8 +43,14 @@ func main() {
 	routes.GroupRoutes(app)
 	routes.AuthRoutes(app)
 
-	fmt.Println("🚀 Server starting on localhost:3000")
-	log.Fatal(app.Listen("localhost:3000"))
+	// Get port from environment variable or use default
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	fmt.Printf("🚀 Server starting on port %s\n", port)
+	log.Fatal(app.Listen("0.0.0.0:" + port))
 
 	kp1, err := keypair.Random()
 	if err != nil {

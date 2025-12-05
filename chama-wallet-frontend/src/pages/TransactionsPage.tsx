@@ -17,13 +17,13 @@ const TransactionsPage = () => {
     })
   }
 
-  const getTransactionIcon = (hash: string) => {
+  const getTransactionIcon = (_hash: string) => {
     // This is a simplified way to determine transaction type
     // In a real app, you'd analyze the transaction operations
     return Math.random() > 0.5 ? ArrowUpRight : ArrowDownRight
   }
 
-  const getTransactionColor = (hash: string) => {
+  const getTransactionColor = (_hash: string) => {
     return Math.random() > 0.5 ? 'text-green-600' : 'text-red-600'
   }
 

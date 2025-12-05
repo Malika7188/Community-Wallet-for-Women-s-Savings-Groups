@@ -9,7 +9,6 @@ vendor/
 
 # Soroban CLI
 .soroban/
-*.wasm
 *.xdr
 target/
 

@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { HomeIcon, UsersIcon, WalletIcon, ChartBarIcon, Cog6ToothIcon, ArrowLeftOnRectangleIcon, BellIcon, Bars3Icon } from '@heroicons/react/24/outline';
+import { HomeIcon, UsersIcon, WalletIcon, ChartBarIcon, ArrowLeftOnRectangleIcon, Bars3Icon } from '@heroicons/react/24/outline';
 import NotificationCenter from './NotificationCenter';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
