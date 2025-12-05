@@ -40,6 +40,15 @@ func init() {
 }
 
 func DeployChamaContract() (string, error) {
+	// Check if a contract is already deployed
+	existingContractID := os.Getenv("SOROBAN_CONTRACT_ID")
+	if existingContractID != "" {
+		fmt.Printf("✅ Using existing contract: %s\n", existingContractID)
+		return existingContractID, nil
+	}
+
+	fmt.Println("📝 No existing contract found, attempting to deploy a new one...")
+
 	// Load secret key from environment
 	secret := os.Getenv("SOROBAN_SECRET_KEY")
 	if secret == "" {
