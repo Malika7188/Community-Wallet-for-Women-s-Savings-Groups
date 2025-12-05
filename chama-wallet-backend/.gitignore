@@ -7,6 +7,9 @@
 bin/
 vendor/
 
+# Compiled binary
+chama-wallet-backend
+
 # Soroban CLI
 .soroban/
 *.wasm
@@ -14,7 +17,7 @@ vendor/
 target/
 
 # Environment
-# .env
+.env
 
 # OS + Editors
 .vscode/
