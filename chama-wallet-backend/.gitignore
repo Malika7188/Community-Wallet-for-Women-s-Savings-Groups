@@ -7,6 +7,9 @@
 bin/
 vendor/
 
+# Compiled binary
+chama-wallet-backend
+
 # Soroban CLI
 .soroban/
 *.xdr
