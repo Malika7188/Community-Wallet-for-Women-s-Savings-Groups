@@ -1,6 +1,6 @@
 # Chama Wallet Frontend
 
-A modern React frontend for the Chama Wallet platform - a blockchain-powered savings and lending platform for Chamas (informal savings groups) built on the Stellar network.
+A modern React frontend for the Chama Trust Wallet platform - a blockchain-powered savings and lending platform for Chamas (informal savings groups) built on the Stellar network.
 
 ## 🌟 Features
 

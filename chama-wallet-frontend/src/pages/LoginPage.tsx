@@ -46,7 +46,7 @@ const LoginPage = () => {
           <h2 className="text-5xl font-black text-[#1a237e] tracking-tight mb-2" style={{ fontFamily: 'Inter, Roboto, sans-serif' }}>
             Welcome back
           </h2>
-          <p className="mb-8 text-gray-600 font-semibold text-xl">Sign in to your Chama Wallet account</p>
+          <p className="mb-8 text-gray-600 font-semibold text-xl">Sign in to your Chama Trust Wallet account</p>
           <form className="w-full space-y-7" onSubmit={handleSubmit}>
             <div>
               <label htmlFor="email" className="block text-lg font-bold text-[#1a237e] mb-2">Email address</label>
