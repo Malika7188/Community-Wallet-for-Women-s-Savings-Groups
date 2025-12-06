@@ -30,10 +30,10 @@ func GetUserNotifications(userID string) ([]models.Notification, error) {
 		Preload("User").
 		Order("created_at DESC").
 		Find(&notifications).Error
-	
+
 	fmt.Printf("🔍 Query: SELECT * FROM notifications WHERE user_id = '%s'\n", userID)
 	fmt.Printf("✅ Found %d notifications in database\n", len(notifications))
-	
+
 	return notifications, err
 }
 
@@ -48,7 +48,7 @@ func SendContributionReminders() error {
 	var groups []models.Group
 	fiveDaysFromNow := time.Now().Add(5 * 24 * time.Hour)
 
-	if err := database.DB.Where("status = ? AND next_contribution_date BETWEEN ? AND ?", 
+	if err := database.DB.Where("status = ? AND next_contribution_date BETWEEN ? AND ?",
 		"active", time.Now(), fiveDaysFromNow).Find(&groups).Error; err != nil {
 		return err
 	}
@@ -58,7 +58,7 @@ func SendContributionReminders() error {
 		database.DB.Where("group_id = ? AND status = ?", group.ID, "approved").Find(&members)
 
 		for _, member := range members {
-			daysUntil := int(group.NextContributionDate.Sub(time.Now()).Hours() / 24)
+			daysUntil := int(time.Until(group.NextContributionDate).Hours() / 24)
 			CreateNotification(
 				member.UserID,
 				group.ID,
